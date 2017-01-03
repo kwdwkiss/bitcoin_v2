@@ -7,9 +7,9 @@
  */
 namespace Modules\Bitcoin\Service;
 
-use Bitcoin\Model\ApiLog;
 use Carbon\Carbon;
 use GuzzleHttp\Exception\RequestException;
+use Modules\Core\Entities\ApiLog;
 use Psr\Http\Message\ResponseInterface;
 
 class HuoRestApi
@@ -20,10 +20,13 @@ class HuoRestApi
 
     protected $restApiUrl = 'http://api.huobi.com';
 
-    public function __construct($apiKey, $secretKey)
+    protected $apiLogEnable = false;
+
+    public function __construct($apiKey, $secretKey, $apiLogEnable)
     {
         $this->apiKey = $apiKey;
         $this->secretKey = $secretKey;
+        $this->apiLogEnable;
     }
 
     public function createSignature($params)
@@ -100,14 +103,13 @@ class HuoRestApi
             $body = $response->getBody();
             $data = \GuzzleHttp\json_decode($body, true);
             $data['httpDate'] = $httpDate->timestamp;
+            $apiLogData['data'] = $data;
             if (isset($data['code'])) {
-                $apiLogData['error_code'] = $data['code'];
                 throw new \Exception($data['message'], $data['code']);
             }
-            $apiLogData['data'] = $data;
             return $data;
         } finally {
-            app('bitcoinConfig')->get('apiLog') && ApiLog::create($apiLogData);
+            $this->apiLogEnable && ApiLog::create($apiLogData);
         }
     }
 

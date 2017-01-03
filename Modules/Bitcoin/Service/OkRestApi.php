@@ -7,9 +7,9 @@
  */
 namespace Modules\Bitcoin\Service;
 
-use Bitcoin\Model\ApiLog;
 use Carbon\Carbon;
 use GuzzleHttp\Exception\RequestException;
+use Modules\Core\Entities\ApiLog;
 use Psr\Http\Message\ResponseInterface;
 
 class OkRestApi
@@ -32,10 +32,13 @@ class OkRestApi
 
     protected $restApiUrl = 'https://www.okcoin.cn';
 
-    public function __construct($apiKey, $secretKey)
+    protected $apiLogEnable = false;
+
+    public function __construct($apiKey, $secretKey, $apiLogEnable)
     {
         $this->apiKey = $apiKey;
         $this->secretKey = $secretKey;
+        $this->apiLogEnable = $apiLogEnable;
     }
 
     public function createSignature($params)
@@ -114,12 +117,11 @@ class OkRestApi
             $data['httpDate'] = $httpDate->timestamp;
             $apiLogData['data'] = $data;
             if (isset($data['error_code'])) {
-                $apiLogData['error_code'] = $data['error_code'];
-                throw new \Exception('OkCoin.api.error', $apiLogData['error_code'], $data);
+                throw new \Exception('OkCoin.api.error', $data['error_code']);
             }
             return $data;
         } finally {
-            app('bitcoinConfig')->get('apiLog') && ApiLog::create($apiLogData);
+            $this->apiLogEnable && ApiLog::create($apiLogData);
         }
     }
 

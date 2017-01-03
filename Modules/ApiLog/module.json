@@ -1,0 +1,15 @@
+{
+    "name": "ApiLog",
+    "alias": "apilog",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\ApiLog\\Providers\\ApiLogServiceProvider"
+    ],
+    "aliases":{},
+    "files": [
+        "start.php"
+    ]
+}
