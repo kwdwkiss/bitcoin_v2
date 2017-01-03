@@ -179,7 +179,7 @@ return [
         App\Providers\RouteServiceProvider::class,
 
         Nwidart\Modules\LaravelModulesServiceProvider::class,
-        //Encore\Admin\Providers\AdminServiceProvider::class,
+        Encore\Admin\Providers\AdminServiceProvider::class,
     ],
 
     /*

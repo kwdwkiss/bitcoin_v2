@@ -10,8 +10,6 @@ namespace Modules\Bitcoin\Service;
 use Bitcoin\Model\ApiLog;
 use Carbon\Carbon;
 use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Psr7\Response;
-use Modules\Bitcoin\Providers\BitcoinServiceProvider;
 use Psr\Http\Message\ResponseInterface;
 
 class HuoRestApi
@@ -48,7 +46,7 @@ class HuoRestApi
             }, function (RequestException $e) {
                 echo $e->getMessage() . "\n";
                 echo $e->getRequest()->getMethod();
-                throw new \Exception('HuobiRestApi.code.error');
+                throw new \Exception('HuoRestApi.code.error');
             });
             return $promise;
         }
@@ -67,7 +65,6 @@ class HuoRestApi
         if ($callback) {
             $promise = app('guzzle')->postAsync($url, ['form_params' => $params]);
             $promise->then(function (ResponseInterface $res) use ($action, $params, $http_start, $callback) {
-                //myLog('huobi.post.callback', [$action, $params, $http_start]);
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $action, $params, $http_start, $http_end);
                 $callback($data);
@@ -83,7 +80,7 @@ class HuoRestApi
         return $this->handleResponse($response, $action, $params, $http_start, $http_end);
     }
 
-    public function handleResponse(Response $response, $action, $params, $http_start, $http_end)
+    public function handleResponse(ResponseInterface $response, $action, $params, $http_start, $http_end)
     {
         $code = $response->getStatusCode();
         $httpDate = $response->getHeader('Date')[0];

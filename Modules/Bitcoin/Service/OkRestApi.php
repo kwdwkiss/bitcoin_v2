@@ -7,7 +7,6 @@
  */
 namespace Modules\Bitcoin\Service;
 
-use Bitcoin\Exception\OkCoinRestApiException;
 use Bitcoin\Model\ApiLog;
 use Carbon\Carbon;
 use GuzzleHttp\Exception\RequestException;
@@ -55,14 +54,13 @@ class OkRestApi
         if ($callback) {
             $promise = app('guzzle')->postAsync($url, ['form_params' => $params]);
             $promise->then(function (ResponseInterface $res) use ($action, $params, $http_start, $callback) {
-                //myLog('okcoin.post.callback', [$action, $params, $http_start]);
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $action, $params, $http_start, $http_end);
                 $callback($data);
             }, function (RequestException $e) {
                 echo $e->getMessage() . "\n";
                 echo $e->getRequest()->getMethod();
-                throw new \Exception('OkCoinRestApi.code.error');
+                throw new \Exception('OkRestApi.code.error');
             });
             return $promise;
         } else {
@@ -95,7 +93,7 @@ class OkRestApi
         }
     }
 
-    public function handleResponse($response, $action, $params, $http_start, $http_end)
+    public function handleResponse(ResponseInterface $response, $action, $params, $http_start, $http_end)
     {
         $code = $response->getStatusCode();
         $httpDate = $response->getHeader('Date')[0];
@@ -117,8 +115,7 @@ class OkRestApi
             $apiLogData['data'] = $data;
             if (isset($data['error_code'])) {
                 $apiLogData['error_code'] = $data['error_code'];
-                myLog('OkCoin.api.error', [$apiLogData['error_code'], $apiLogData]);
-                throw new OkCoinRestApiException('OkCoin.api.error', $apiLogData['error_code'], $data);
+                throw new \Exception('OkCoin.api.error', $apiLogData['error_code'], $data);
             }
             return $data;
         } finally {
