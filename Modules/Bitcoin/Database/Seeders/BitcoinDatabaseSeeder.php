@@ -25,7 +25,7 @@ class BitcoinDatabaseSeeder extends Seeder
         if (!$huoAccount) {
             Account::create(['site' => 'huobi', 'name' => 'kwdwkiss', 'email' => 'kwdwkisscly@163.com']);
         }
-        list($oKAccount, $huoAccount) = app('bitService')->userInfo();
+        list($oKAccount, $huoAccount) = app('bitService')->syncAccount();
         var_dump($oKAccount->toJson(), $huoAccount->toJson());
         // $this->call("OthersTableSeeder");
     }
