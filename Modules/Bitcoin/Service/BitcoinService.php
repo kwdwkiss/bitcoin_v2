@@ -1,21 +1,15 @@
 <?php
+/**
+ * Created by PhpStorm.
+ * User: kwdwkiss
+ * Date: 2017/1/7
+ * Time: 下午2:55
+ */
+namespace Modules\Bitcoin\Service;
 
-namespace Modules\Bitcoin\Console;
-
-use Illuminate\Console\Command;
-
-class Test extends Command
+class BitcoinService
 {
-    protected $signature = 'test';
-
-    protected $description = 'Command description.';
-
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    public function fire()
+    public function getDepth($depth = 15)
     {
         $okDepth = null;
         $huoDepth = null;
@@ -39,13 +33,11 @@ class Test extends Command
         if ($huoException instanceof \Exception) {
             throw $huoException;
         }
-        $okAsks = array_slice($okDepth['asks'], 0, 15);
-        $okBids = array_slice($okDepth['bids'], 0, 15);
-        $huoAsks = array_slice(array_reverse($huoDepth['asks']), 0, 15);
-        $huoBids = array_slice($huoDepth['bids'], 0, 15);
-        $this->line('ok_asks:' . json_encode($okAsks));
-        $this->line('ok_bids:' . json_encode($okBids));
-        $this->line('huo_asks:' . json_encode($huoAsks));
-        $this->line('huo_bids:' . json_encode($huoBids));
+        \GuzzleHttp\Promise\settle($promise)->wait();
+        $okAsks = array_slice($okDepth['asks'], 0, $depth);
+        $okBids = array_slice($okDepth['bids'], 0, $depth);
+        $huoAsks = array_slice(array_reverse($huoDepth['asks']), 0, $depth);
+        $huoBids = array_slice($huoDepth['bids'], 0, $depth);
+        return [$okAsks, $okBids, $huoAsks, $huoBids];
     }
 }

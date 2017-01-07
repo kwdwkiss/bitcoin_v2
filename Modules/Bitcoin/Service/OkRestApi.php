@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\FulfilledPromise;
+use GuzzleHttp\Promise\RejectedPromise;
 use Modules\Core\Entities\ApiLog;
 use Psr\Http\Message\ResponseInterface;
 
@@ -70,8 +71,6 @@ class OkRestApi
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
                 return new FulfilledPromise($data);
-            }, function (RequestException $e) {
-                throw $e;
             });
         } else {
             $response = $this->http->post($url, ['form_params' => $params]);
@@ -90,8 +89,6 @@ class OkRestApi
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
                 return new FulfilledPromise($data);
-            }, function (RequestException $e) {
-                throw $e;
             });
         } else {
             $response = $this->http->get($url);
@@ -145,26 +142,30 @@ class OkRestApi
         return $this->restApiUrl . $action . '?' . http_build_query($params);
     }
 
-    public function getTicker($symbol = 'btc_cny', $async = false)
+    public function getTicker($async = false)
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/ticker.do';
         return $this->httpGet($action, compact('symbol'), $async);
     }
 
-    public function getDepth($symbol = 'btc_cny', $async = false)
+    public function getDepth($async = false)
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/depth.do';
         return $this->httpGet($action, compact('symbol'), $async);
     }
 
-    public function getTrades($symbol = 'btc_cny')
+    public function getTrades()
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/trades.do';
         return $this->httpGet($action, compact('symbol'));
     }
 
-    public function getKline($type = '1min', $size = 100, $since = 0, $symbol = 'btc_cny', $async = false)
+    public function getKline($type = '1min', $size = 100, $since = 0, $async = false)
     {
+        $symbol = 'btc_cny';
         $since = $since ?: strtotime('-1 Day');
         $action = '/api/v1/kline.do';
         return $this->httpGet($action, compact('type', 'size', 'since', 'symbol'), $async);
@@ -190,8 +191,9 @@ class OkRestApi
      * 市价卖单（必填）： BTC :最少卖出数量大于等于0.01 /
      * LTC :最少卖出数量大于等于0.1]（市价买单不传amount）
      */
-    public function trade($type, $price, $amount, $symbol = 'btc_cny', $async = false)
+    public function trade($type, $price, $amount, $async = false)
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/trade.do';
         switch ($type) {
             case 'buy':
@@ -210,21 +212,22 @@ class OkRestApi
         return $this->httpPost($action, $params, $async);
     }
 
-    public function buy($price, $amount, $symbol = 'btc_cny', $async = false)
+    public function buy($price, $amount, $async = false)
     {
-        return $this->trade('buy', $price, $amount, $symbol, $async);
+        return $this->trade('buy', $price, $amount, $async);
     }
 
-    public function sell($price, $amount, $symbol = 'btc_cny', $async = false)
+    public function sell($price, $amount, $async = false)
     {
-        return $this->trade('sell', $price, $amount, $symbol, $async);
+        return $this->trade('sell', $price, $amount, $async);
     }
 
     /*
      * since 从某一tid开始访问600条数据(必填项)
      */
-    public function tradeHistory($since, $symbol = 'btc_cny')
+    public function tradeHistory($since)
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/trade_history.do';
         return $this->httpPost($action, compact('since', 'symbol'));
     }
@@ -239,8 +242,9 @@ class OkRestApi
      * price和amount参数参考trade接口中的说明，最终买卖类型由orders_data 中type 为准，
      * 如orders_data不设定type 则由上面type设置为准。
      */
-    public function batchTrade($orders_data, $type = 'sell', $symbol = 'btc_cny')
+    public function batchTrade($orders_data, $type = 'sell')
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/batch_trade.do';
         return $this->httpPost($action, compact('type', 'orders_data', 'symbol'));
     }
@@ -250,15 +254,16 @@ class OkRestApi
      *
      * order_id 订单ID(多个订单ID中间以","分隔,一次最多允许撤消3个订单)
      */
-    public function cancelOrder($order_id, $symbol = 'btc_cny', $async = false)
+    public function cancelOrder($order_id, $async = false)
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/cancel_order.do';
         return $this->httpPost($action, compact('order_id', 'symbol'), $async);
     }
 
-    public function cancel($order_id, $symbol = 'btc_cny', $async = false)
+    public function cancel($order_id, $async = false)
     {
-        return $this->cancelOrder($order_id, $symbol, $async);
+        return $this->cancelOrder($order_id, $async);
     }
 
     /*
@@ -266,15 +271,16 @@ class OkRestApi
      *
      * order_id 订单ID -1:未完成订单，否则查询相应订单号的订单
      */
-    public function orderInfo($order_id = -1, $symbol = 'btc_cny', $async = false)
+    public function orderInfo($order_id = -1, $async = false)
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/order_info.do';
         return $this->httpPost($action, compact('order_id', 'symbol'), $async);
     }
 
-    public function orders($symbol = 'btc_cny', $async = false)
+    public function orders($async = false)
     {
-        return $this->orderInfo(-1, $symbol, $async);
+        return $this->orderInfo(-1, $async);
     }
 
     /*
@@ -284,8 +290,9 @@ class OkRestApi
      *
      * order_id 订单ID(多个订单ID中间以","分隔,一次最多允许查询50个订单)
      */
-    public function ordersInfo($type, $order_id, $symbol = 'btc_cny')
+    public function ordersInfo($type, $order_id)
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/orders_info.do';
         return $this->httpPost($action, compact('type', 'order_id', 'symbol'));
     }
@@ -295,10 +302,10 @@ class OkRestApi
      * current_page 当前页数
      * page_length 每页数据条数，最多不超过200
      */
-    public function orderHistory($status, $current_page, $page_length, $symbol = 'btc_cny')
+    public function orderHistory($status, $current_page, $page_length)
     {
+        $symbol = 'btc_cny';
         $action = '/api/v1/order_history.do';
-        return $this->httpPost($action, compact('status', 'current_page',
-            'page_length', 'symbol'));
+        return $this->httpPost($action, compact('status', 'current_page', 'page_length', 'symbol'));
     }
 }

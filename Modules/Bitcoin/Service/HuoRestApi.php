@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\FulfilledPromise;
+use GuzzleHttp\Promise\RejectedPromise;
 use Modules\Core\Entities\ApiLog;
 use Psr\Http\Message\ResponseInterface;
 
@@ -51,8 +52,6 @@ class HuoRestApi
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
                 return new FulfilledPromise($data);
-            }, function (RequestException $e) {
-                throw $e;
             });
         }
         $response = $this->http->get($url);
@@ -73,8 +72,6 @@ class HuoRestApi
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
                 return new FulfilledPromise($data);
-            }, function (RequestException $e) {
-                throw $e;
             });
         }
         $response = $this->http->post($url, ['form_params' => $params]);
@@ -143,47 +140,54 @@ class HuoRestApi
         return $this->httpPost(compact('method'), $async);
     }
 
-    public function orders($coin_type = 1)
+    public function orders()
     {
+        $coin_type = 1;
         $method = 'get_orders';
         return $this->httpPost(compact('method', 'coin_type'));
     }
 
-    public function orderInfo($id, $coin_type = 1, $async = false)
+    public function orderInfo($id, $async = false)
     {
+        $coin_type = 1;
         $method = 'order_info';
         return $this->httpPost(compact('method', 'id', 'coin_type'), $async);
     }
 
-    public function buy($price, $amount, $coin_type = 1, $async = false)
+    public function buy($price, $amount, $async = false)
     {
+        $coin_type = 1;
         $price = (double)$price;
         $method = 'buy';
         return $this->httpPost(compact('method', 'price', 'amount', 'coin_type'), $async);
     }
 
-    public function sell($price, $amount, $coin_type = 1, $async = false)
+    public function sell($price, $amount, $async = false)
     {
+        $coin_type = 1;
         $price = (double)$price;
         $method = 'sell';
         return $this->httpPost(compact('method', 'price', 'amount', 'coin_type'), $async);
     }
 
-    public function buyMarket($amount, $coin_type = 1, $async = false)
+    public function buyMarket($amount, $async = false)
     {
+        $coin_type = 1;
         //$amount 总金额
         $method = 'buy_market';
         return $this->httpPost(compact('method', 'amount', 'coin_type'), $async);
     }
 
-    public function sellMarket($amount, $coin_type = 1, $async = false)
+    public function sellMarket($amount, $async = false)
     {
+        $coin_type = 1;
         $method = 'sell_market';
         return $this->httpPost(compact('method', 'amount', 'coin_type'), $async);
     }
 
-    public function cancel($id, $coin_type = 1, $async = false)
+    public function cancel($id, $async = false)
     {
+        $coin_type = 1;
         $method = 'cancel_order';
         return $this->httpPost(compact('method', 'id', 'coin_type'), $async);
     }
