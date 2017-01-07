@@ -4,9 +4,9 @@ namespace Modules\Bitcoin\Console;
 
 use Illuminate\Console\Command;
 
-class Test extends Command
+class UserInfo extends Command
 {
-    protected $signature = 'test';
+    protected $signature = 'userInfo';
 
     protected $description = 'Command description.';
 
@@ -17,7 +17,7 @@ class Test extends Command
 
     public function fire()
     {
-        list($okData, $huoData) = app('bitcoinService')->userInfo();
+        list($okData, $huoData) = app('bitApi')->userInfo();
         $this->line('okInfo:' . json_encode($okData));
         $this->line('huoInfo:' . json_encode($huoData));
     }
