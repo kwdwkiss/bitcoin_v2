@@ -8,6 +8,7 @@
 namespace Modules\Bitcoin\Service;
 
 use Carbon\Carbon;
+use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Modules\Core\Entities\ApiLog;
 use Psr\Http\Message\ResponseInterface;
@@ -22,11 +23,14 @@ class HuoRestApi
 
     protected $apiLogEnable = false;
 
-    public function __construct($apiKey, $secretKey, $apiLogEnable)
+    protected $http;
+
+    public function __construct($apiKey, $secretKey, Client $http, $apiLogEnable)
     {
         $this->apiKey = $apiKey;
         $this->secretKey = $secretKey;
-        $this->apiLogEnable;
+        $this->apiLogEnable = $apiLogEnable;
+        $this->http = $http;
     }
 
     public function createSignature($params)
@@ -41,21 +45,19 @@ class HuoRestApi
         $url = $this->getGetUrl($action, $params);
         $http_start = microtime(true);
         if ($callback) {
-            $promise = app('guzzle')->getAsync($url);
-            $promise->then(function (ResponseInterface $res) use ($action, $params, $http_start, $callback) {
+            $promise = $this->http->getAsync($url);
+            $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start, $callback) {
                 $http_end = microtime(true);
-                $data = $this->handleResponse($res, $action, $params, $http_start, $http_end);
+                $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
                 $callback($data);
             }, function (RequestException $e) {
-                echo $e->getMessage() . "\n";
-                echo $e->getRequest()->getMethod();
-                throw new \Exception('HuoRestApi.code.error');
+                throw $e;
             });
             return $promise;
         }
-        $response = app('guzzle')->get($url);
+        $response = $this->http->get($url);
         $http_end = microtime(true);
-        return $this->handleResponse($response, $action, $params, $http_start, $http_end);
+        return $this->handleResponse($response, $url, $params, $http_start, $http_end);
     }
 
     public function httpPost($params, callable $callback = null, $action = '/apiv3')
@@ -66,46 +68,47 @@ class HuoRestApi
         $url = $this->getPostUrl($action);
         $http_start = microtime(true);
         if ($callback) {
-            $promise = app('guzzle')->postAsync($url, ['form_params' => $params]);
-            $promise->then(function (ResponseInterface $res) use ($action, $params, $http_start, $callback) {
+            $promise = $this->http->postAsync($url, ['form_params' => $params]);
+            $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start, $callback) {
                 $http_end = microtime(true);
-                $data = $this->handleResponse($res, $action, $params, $http_start, $http_end);
+                $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
                 $callback($data);
             }, function (RequestException $e) {
-                echo $e->getMessage() . "\n";
-                echo $e->getRequest()->getMethod();
-                throw new \Exception('HuobiRestApi.code.error');
+                throw $e;
             });
             return $promise;
         }
-        $response = app('guzzle')->post($url, ['form_params' => $params]);
+        $response = $this->http->post($url, ['form_params' => $params]);
         $http_end = microtime(true);
-        return $this->handleResponse($response, $action, $params, $http_start, $http_end);
+        return $this->handleResponse($response, $url, $params, $http_start, $http_end);
     }
 
-    public function handleResponse(ResponseInterface $response, $action, $params, $http_start, $http_end)
+    public function handleResponse(ResponseInterface $response, $url, $params, $start_time, $end_time)
     {
-        $code = $response->getStatusCode();
-        $httpDate = $response->getHeader('Date')[0];
-        $httpDate = Carbon::parse($httpDate)->setTimezone(null);
+        $uriArray = parse_url($url);
+        $status_code = $response->getStatusCode();
+        $_date = $response->getHeader('Date')[0];
+        $_date = Carbon::parse($_date)->setTimezone(null);
         $apiLogData = [
-            'site' => 'huobi',
-            'code' => $code,
-            'action' => $action,
+            'url' => $url,
+            'host' => $uriArray['host'],
+            'action' => $uriArray['path'],
             'params' => $params,
-            'http_start' => $http_start,
-            'http_end' => $http_end,
+            'status_code' => $status_code,
+            'start_time' => $start_time,
+            'end_time' => $end_time,
+            'cost_time' => $end_time - $start_time,
         ];
         try {
-            if ($code != 200) {
+            if ($status_code != 200) {
                 throw new \Exception('huoBiRestApi.code.error');
             }
             $body = $response->getBody();
             $data = \GuzzleHttp\json_decode($body, true);
-            $data['httpDate'] = $httpDate->timestamp;
+            $data['_date'] = $_date->timestamp;
             $apiLogData['data'] = $data;
             if (isset($data['code'])) {
-                throw new \Exception($data['message'], $data['code']);
+                throw new \Exception("code:{$data['code']} {$data['message']}", $data['code']);
             }
             return $data;
         } finally {

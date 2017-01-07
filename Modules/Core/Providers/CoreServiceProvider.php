@@ -2,10 +2,12 @@
 
 namespace Modules\Core\Providers;
 
+use GuzzleHttp\Client;
 use Illuminate\Support\ServiceProvider;
 
 class CoreServiceProvider extends ServiceProvider
 {
+    use ModuleServiceProviderTrait;
     /**
      * Indicates if loading of the provider is deferred.
      *
@@ -32,7 +34,13 @@ class CoreServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        if ($this->app->environment() !== 'production') {
+            $this->app->register(\Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider::class);
+        }
+        $this->app->singleton('guzzle', Client::class);
+
+        $this->registerCommand();
+        $this->registerService();
     }
 
     /**
@@ -43,10 +51,10 @@ class CoreServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('core.php'),
+            __DIR__ . '/../Config/config.php' => config_path('core.php'),
         ]);
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'core'
+            __DIR__ . '/../Config/config.php', 'core'
         );
     }
 
@@ -59,7 +67,7 @@ class CoreServiceProvider extends ServiceProvider
     {
         $viewPath = base_path('resources/views/modules/core');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
@@ -82,7 +90,7 @@ class CoreServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'core');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'core');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'core');
         }
     }
 

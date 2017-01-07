@@ -8,6 +8,7 @@
 namespace Modules\Bitcoin\Service;
 
 use Carbon\Carbon;
+use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Modules\Core\Entities\ApiLog;
 use Psr\Http\Message\ResponseInterface;
@@ -34,11 +35,19 @@ class OkRestApi
 
     protected $apiLogEnable = false;
 
-    public function __construct($apiKey, $secretKey, $apiLogEnable)
+    protected $http;
+
+    protected $errorMsg = [
+        10000 => '必选参数不能为空',
+        10001 => '用户请求过于频繁',
+    ];
+
+    public function __construct($apiKey, $secretKey, Client $http, $apiLogEnable)
     {
         $this->apiKey = $apiKey;
         $this->secretKey = $secretKey;
         $this->apiLogEnable = $apiLogEnable;
+        $this->http = $http;
     }
 
     public function createSignature($params)
@@ -55,10 +64,10 @@ class OkRestApi
         $url = $this->getPostUrl($action);
         $http_start = microtime(true);
         if ($callback) {
-            $promise = app('guzzle')->postAsync($url, ['form_params' => $params]);
-            $promise->then(function (ResponseInterface $res) use ($action, $params, $http_start, $callback) {
+            $promise = $this->http->postAsync($url, ['form_params' => $params]);
+            $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start, $callback) {
                 $http_end = microtime(true);
-                $data = $this->handleResponse($res, $action, $params, $http_start, $http_end);
+                $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
                 $callback($data);
             }, function (RequestException $e) {
                 echo $e->getMessage() . "\n";
@@ -67,9 +76,9 @@ class OkRestApi
             });
             return $promise;
         } else {
-            $response = app('guzzle')->post($url, ['form_params' => $params]);
+            $response = $this->http->post($url, ['form_params' => $params]);
             $http_end = microtime(true);
-            return $this->handleResponse($response, $action, $params, $http_start, $http_end);
+            return $this->handleResponse($response, $url, $params, $http_start, $http_end);
         }
     }
 
@@ -78,10 +87,10 @@ class OkRestApi
         $url = $this->getGetUrl($action, $params);
         $http_start = microtime(true);
         if ($callback) {
-            $promise = app('guzzle')->getAsync($url, ['form_params' => $params]);
-            $promise->then(function (ResponseInterface $res) use ($action, $params, $http_start, $callback) {
+            $promise = $this->http->getAsync($url, ['form_params' => $params]);
+            $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start, $callback) {
                 $http_end = microtime(true);
-                $data = $this->handleResponse($res, $action, $params, $http_start, $http_end);
+                $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
                 $callback($data);
             }, function (RequestException $e) {
                 echo $e->getMessage() . "\n";
@@ -90,34 +99,40 @@ class OkRestApi
             });
             return $promise;
         } else {
-            $response = app('guzzle')->get($url);
+            $response = $this->http->get($url);
             $http_end = microtime(true);
-            return $this->handleResponse($response, $action, $params, $http_start, $http_end);
+            return $this->handleResponse($response, $url, $params, $http_start, $http_end);
         }
     }
 
-    public function handleResponse(ResponseInterface $response, $action, $params, $http_start, $http_end)
+    public function handleResponse(ResponseInterface $response, $url, $params, $start_time, $end_time)
     {
-        $code = $response->getStatusCode();
-        $httpDate = $response->getHeader('Date')[0];
-        $httpDate = Carbon::parse($httpDate)->setTimezone(null);
+        $uriArray = parse_url($url);
+        $status_code = $response->getStatusCode();
+        $_date = $response->getHeader('Date')[0];
+        $_date = Carbon::parse($_date)->setTimezone(null);
         $apiLogData = [
-            'code' => $code,
-            'action' => $action,
+            'url' => $url,
+            'host' => $uriArray['host'],
+            'action' => $uriArray['path'],
             'params' => $params,
-            'http_start' => $http_start,
-            'http_end' => $http_end,
+            'status_code' => $status_code,
+            'start_time' => $start_time,
+            'end_time' => $end_time,
+            'cost_time' => $end_time - $start_time,
         ];
         try {
-            if ($code != 200) {
+            if ($status_code != 200) {
                 throw new \Exception('OkCoinRestApi.code.error');
             }
             $body = $response->getBody();
             $data = \GuzzleHttp\json_decode($body, true);
-            $data['httpDate'] = $httpDate->timestamp;
+            $data['_date'] = $_date->timestamp;
             $apiLogData['data'] = $data;
             if (isset($data['error_code'])) {
-                throw new \Exception('OkCoin.api.error', $data['error_code']);
+                $error_code = $data['error_code'];
+                $msg = isset($this->errorMsg[$error_code]) ? $this->errorMsg[$error_code] : '';
+                throw new \Exception("code:$error_code $msg", $data['error_code']);
             }
             return $data;
         } finally {
@@ -184,20 +199,30 @@ class OkRestApi
     {
         $action = '/api/v1/trade.do';
         switch ($type) {
-            case static::TRADE_BUY:
-            case static::TRADE_SELL:
+            case 'buy':
+            case 'sell':
                 $params = compact('type', 'price', 'amount', 'symbol');
                 break;
-            case static::TRADE_BUY_MARKET:
+            case 'buy_market':
                 $params = compact('type', 'price', 'symbol');
                 break;
-            case static::TRADE_SELL_MARKET:
+            case 'sell_market':
                 $params = compact('type', 'amount', 'symbol');
                 break;
             default:
                 throw new \Exception('trade.type.error');
         }
         return $this->httpPost($action, $params, $callback);
+    }
+
+    public function buy($price, $amount, $symbol = 'btc_cny', callable $callback = null)
+    {
+        return $this->trade('buy', $price, $amount, $symbol, $callback);
+    }
+
+    public function sell($price, $amount, $symbol = 'btc_cny', callable $callback = null)
+    {
+        return $this->trade('sell', $price, $amount, $symbol, $callback);
     }
 
     /*
@@ -236,8 +261,12 @@ class OkRestApi
         if ($callback) {
             return $this->httpPost($action, compact('order_id', 'symbol'), $callback);
         }
-        $okCoinData = $this->httpPost($action, compact('order_id', 'symbol'));
-        return $okCoinData->cancelOrder();
+        return $this->httpPost($action, compact('order_id', 'symbol'));
+    }
+
+    public function cancel($order_id, $symbol = 'btc_cny', callable $callback = null)
+    {
+        return $this->cancelOrder($order_id, $symbol, $callback);
     }
 
     /*
@@ -249,6 +278,11 @@ class OkRestApi
     {
         $action = '/api/v1/order_info.do';
         return $this->httpPost($action, compact('order_id', 'symbol'), $callback);
+    }
+
+    public function orders($symbol = 'btc_cny', callable $callback = null)
+    {
+        return $this->orderInfo(-1, $symbol, $callback);
     }
 
     /*

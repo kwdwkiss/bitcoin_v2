@@ -3,9 +3,13 @@
 namespace Modules\Bitcoin\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Modules\Bitcoin\Service\HuoRestApi;
+use Modules\Bitcoin\Service\OkRestApi;
+use Modules\Core\Providers\ModuleServiceProviderTrait;
 
 class BitcoinServiceProvider extends ServiceProvider
 {
+    use ModuleServiceProviderTrait;
     /**
      * Indicates if loading of the provider is deferred.
      *
@@ -32,7 +36,14 @@ class BitcoinServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        $this->registerCommand();
+        $this->registerService();
+        $this->app->singleton('huoRestApi', function () {
+            return new HuoRestApi(env('HUOBI_API_KEY'), env('HUOBI_SECRET_KEY'), app('guzzle'), true);
+        });
+        $this->app->singleton('okRestApi', function () {
+            return new OkRestApi(env('OKCOIN_API_KEY'), env('OKCOIN_SECRET_KEY'), app('guzzle'), true);
+        });
     }
 
     /**
@@ -43,10 +54,10 @@ class BitcoinServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('bitcoin.php'),
+            __DIR__ . '/../Config/config.php' => config_path('bitcoin.php'),
         ]);
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'bitcoin'
+            __DIR__ . '/../Config/config.php', 'bitcoin'
         );
     }
 
@@ -59,7 +70,7 @@ class BitcoinServiceProvider extends ServiceProvider
     {
         $viewPath = base_path('resources/views/modules/bitcoin');
 
-        $sourcePath = __DIR__.'/../Resources/views';
+        $sourcePath = __DIR__ . '/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
@@ -82,7 +93,7 @@ class BitcoinServiceProvider extends ServiceProvider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'bitcoin');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'bitcoin');
+            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'bitcoin');
         }
     }
 
