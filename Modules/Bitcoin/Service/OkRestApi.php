@@ -10,6 +10,7 @@ namespace Modules\Bitcoin\Service;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\FulfilledPromise;
 use Modules\Core\Entities\ApiLog;
 use Psr\Http\Message\ResponseInterface;
 
@@ -57,24 +58,21 @@ class OkRestApi
         return strtoupper(md5(urldecode(http_build_query($params)) . $secretStr));
     }
 
-    public function httpPost($action, $params, callable $callback = null)
+    public function httpPost($action, $params, $async = false)
     {
         $params['api_key'] = $this->apiKey;
         $params['sign'] = $this->createSignature($params);
         $url = $this->getPostUrl($action);
         $http_start = microtime(true);
-        if ($callback) {
+        if ($async) {
             $promise = $this->http->postAsync($url, ['form_params' => $params]);
-            $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start, $callback) {
+            return $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start) {
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
-                $callback($data);
+                return new FulfilledPromise($data);
             }, function (RequestException $e) {
-                echo $e->getMessage() . "\n";
-                echo $e->getRequest()->getMethod();
-                throw new \Exception('OkRestApi.code.error');
+                throw $e;
             });
-            return $promise;
         } else {
             $response = $this->http->post($url, ['form_params' => $params]);
             $http_end = microtime(true);
@@ -82,22 +80,19 @@ class OkRestApi
         }
     }
 
-    public function httpGet($action, $params, callable $callback = null)
+    public function httpGet($action, $params, $async = false)
     {
         $url = $this->getGetUrl($action, $params);
         $http_start = microtime(true);
-        if ($callback) {
+        if ($async) {
             $promise = $this->http->getAsync($url, ['form_params' => $params]);
-            $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start, $callback) {
+            return $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start) {
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
-                $callback($data);
+                return new FulfilledPromise($data);
             }, function (RequestException $e) {
-                echo $e->getMessage() . "\n";
-                echo $e->getRequest()->getMethod();
-                throw new \Exception('OkCoinRestApi.code.error');
+                throw $e;
             });
-            return $promise;
         } else {
             $response = $this->http->get($url);
             $http_end = microtime(true);
@@ -150,16 +145,16 @@ class OkRestApi
         return $this->restApiUrl . $action . '?' . http_build_query($params);
     }
 
-    public function getTicker($symbol = 'btc_cny', callable $callback = null)
+    public function getTicker($symbol = 'btc_cny', $async = false)
     {
         $action = '/api/v1/ticker.do';
-        return $this->httpGet($action, compact('symbol'), $callback);
+        return $this->httpGet($action, compact('symbol'), $async);
     }
 
-    public function getDepth($symbol = 'btc_cny', callable $callback = null)
+    public function getDepth($symbol = 'btc_cny', $async = false)
     {
         $action = '/api/v1/depth.do';
-        return $this->httpGet($action, compact('symbol'), $callback);
+        return $this->httpGet($action, compact('symbol'), $async);
     }
 
     public function getTrades($symbol = 'btc_cny')
@@ -168,20 +163,20 @@ class OkRestApi
         return $this->httpGet($action, compact('symbol'));
     }
 
-    public function getKline($type = '1min', $size = 100, $since = 0, $symbol = 'btc_cny', callable $callback = null)
+    public function getKline($type = '1min', $size = 100, $since = 0, $symbol = 'btc_cny', $async = false)
     {
         $since = $since ?: strtotime('-1 Day');
         $action = '/api/v1/kline.do';
-        return $this->httpGet($action, compact('type', 'size', 'since', 'symbol'), $callback);
+        return $this->httpGet($action, compact('type', 'size', 'since', 'symbol'), $async);
     }
 
     /*
      * 访问频率 6次/2秒
      */
-    public function userInfo(callable $callback = null)
+    public function userInfo($async = false)
     {
         $action = '/api/v1/userinfo.do';
-        return $this->httpPost($action, [], $callback);
+        return $this->httpPost($action, [], $async);
     }
 
     /*
@@ -195,7 +190,7 @@ class OkRestApi
      * 市价卖单（必填）： BTC :最少卖出数量大于等于0.01 /
      * LTC :最少卖出数量大于等于0.1]（市价买单不传amount）
      */
-    public function trade($type, $price, $amount, $symbol = 'btc_cny', callable $callback = null)
+    public function trade($type, $price, $amount, $symbol = 'btc_cny', $async = false)
     {
         $action = '/api/v1/trade.do';
         switch ($type) {
@@ -212,17 +207,17 @@ class OkRestApi
             default:
                 throw new \Exception('trade.type.error');
         }
-        return $this->httpPost($action, $params, $callback);
+        return $this->httpPost($action, $params, $async);
     }
 
-    public function buy($price, $amount, $symbol = 'btc_cny', callable $callback = null)
+    public function buy($price, $amount, $symbol = 'btc_cny', $async = false)
     {
-        return $this->trade('buy', $price, $amount, $symbol, $callback);
+        return $this->trade('buy', $price, $amount, $symbol, $async);
     }
 
-    public function sell($price, $amount, $symbol = 'btc_cny', callable $callback = null)
+    public function sell($price, $amount, $symbol = 'btc_cny', $async = false)
     {
-        return $this->trade('sell', $price, $amount, $symbol, $callback);
+        return $this->trade('sell', $price, $amount, $symbol, $async);
     }
 
     /*
@@ -255,18 +250,15 @@ class OkRestApi
      *
      * order_id 订单ID(多个订单ID中间以","分隔,一次最多允许撤消3个订单)
      */
-    public function cancelOrder($order_id, $symbol = 'btc_cny', callable $callback = null)
+    public function cancelOrder($order_id, $symbol = 'btc_cny', $async = false)
     {
         $action = '/api/v1/cancel_order.do';
-        if ($callback) {
-            return $this->httpPost($action, compact('order_id', 'symbol'), $callback);
-        }
-        return $this->httpPost($action, compact('order_id', 'symbol'));
+        return $this->httpPost($action, compact('order_id', 'symbol'), $async);
     }
 
-    public function cancel($order_id, $symbol = 'btc_cny', callable $callback = null)
+    public function cancel($order_id, $symbol = 'btc_cny', $async = false)
     {
-        return $this->cancelOrder($order_id, $symbol, $callback);
+        return $this->cancelOrder($order_id, $symbol, $async);
     }
 
     /*
@@ -274,15 +266,15 @@ class OkRestApi
      *
      * order_id 订单ID -1:未完成订单，否则查询相应订单号的订单
      */
-    public function orderInfo($order_id = -1, $symbol = 'btc_cny', callable $callback = null)
+    public function orderInfo($order_id = -1, $symbol = 'btc_cny', $async = false)
     {
         $action = '/api/v1/order_info.do';
-        return $this->httpPost($action, compact('order_id', 'symbol'), $callback);
+        return $this->httpPost($action, compact('order_id', 'symbol'), $async);
     }
 
-    public function orders($symbol = 'btc_cny', callable $callback = null)
+    public function orders($symbol = 'btc_cny', $async = false)
     {
-        return $this->orderInfo(-1, $symbol, $callback);
+        return $this->orderInfo(-1, $symbol, $async);
     }
 
     /*

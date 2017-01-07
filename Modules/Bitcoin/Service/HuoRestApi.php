@@ -10,6 +10,7 @@ namespace Modules\Bitcoin\Service;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\FulfilledPromise;
 use Modules\Core\Entities\ApiLog;
 use Psr\Http\Message\ResponseInterface;
 
@@ -40,43 +41,41 @@ class HuoRestApi
         return strtolower(md5(http_build_query($params)));
     }
 
-    public function httpGet($action, $params = [], callable $callback = null)
+    public function httpGet($action, $params = [], $async = false)
     {
         $url = $this->getGetUrl($action, $params);
         $http_start = microtime(true);
-        if ($callback) {
+        if ($async) {
             $promise = $this->http->getAsync($url);
-            $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start, $callback) {
+            return $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start) {
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
-                $callback($data);
+                return new FulfilledPromise($data);
             }, function (RequestException $e) {
                 throw $e;
             });
-            return $promise;
         }
         $response = $this->http->get($url);
         $http_end = microtime(true);
         return $this->handleResponse($response, $url, $params, $http_start, $http_end);
     }
 
-    public function httpPost($params, callable $callback = null, $action = '/apiv3')
+    public function httpPost($params, $async = false, $action = '/apiv3')
     {
         $params['access_key'] = $this->apiKey;
         $params['created'] = time();
         $params['sign'] = $this->createSignature($params);
         $url = $this->getPostUrl($action);
         $http_start = microtime(true);
-        if ($callback) {
+        if ($async) {
             $promise = $this->http->postAsync($url, ['form_params' => $params]);
-            $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start, $callback) {
+            return $promise->then(function (ResponseInterface $res) use ($url, $params, $http_start) {
                 $http_end = microtime(true);
                 $data = $this->handleResponse($res, $url, $params, $http_start, $http_end);
-                $callback($data);
+                return new FulfilledPromise($data);
             }, function (RequestException $e) {
                 throw $e;
             });
-            return $promise;
         }
         $response = $this->http->post($url, ['form_params' => $params]);
         $http_end = microtime(true);
@@ -126,22 +125,22 @@ class HuoRestApi
         return $this->restApiUrl . $action . '?' . http_build_query($params);
     }
 
-    public function getTicker(callable $callback = null)
+    public function getTicker($async = false)
     {
         $action = '/staticmarket/ticker_btc_json.js';
-        return $this->httpGet($action, [], $callback);
+        return $this->httpGet($action, [], $async);
     }
 
-    public function getDepth(callable $callback = null)
+    public function getDepth($async = false)
     {
         $action = '/staticmarket/depth_btc_json.js';
-        return $this->httpGet($action, [], $callback);
+        return $this->httpGet($action, [], $async);
     }
 
-    public function userInfo(callable $callback = null)
+    public function userInfo($async = false)
     {
         $method = 'get_account_info';
-        return $this->httpPost(compact('method'), $callback);
+        return $this->httpPost(compact('method'), $async);
     }
 
     public function orders($coin_type = 1)
@@ -150,42 +149,42 @@ class HuoRestApi
         return $this->httpPost(compact('method', 'coin_type'));
     }
 
-    public function orderInfo($id, $coin_type = 1, callable $callback = null)
+    public function orderInfo($id, $coin_type = 1, $async = false)
     {
         $method = 'order_info';
-        return $this->httpPost(compact('method', 'id', 'coin_type'), $callback);
+        return $this->httpPost(compact('method', 'id', 'coin_type'), $async);
     }
 
-    public function buy($price, $amount, $coin_type = 1, callable $callback = null)
+    public function buy($price, $amount, $coin_type = 1, $async = false)
     {
         $price = (double)$price;
         $method = 'buy';
-        return $this->httpPost(compact('method', 'price', 'amount', 'coin_type'), $callback);
+        return $this->httpPost(compact('method', 'price', 'amount', 'coin_type'), $async);
     }
 
-    public function sell($price, $amount, $coin_type = 1, callable $callback = null)
+    public function sell($price, $amount, $coin_type = 1, $async = false)
     {
         $price = (double)$price;
         $method = 'sell';
-        return $this->httpPost(compact('method', 'price', 'amount', 'coin_type'), $callback);
+        return $this->httpPost(compact('method', 'price', 'amount', 'coin_type'), $async);
     }
 
-    public function buyMarket($amount, $coin_type = 1, callable $callback = null)
+    public function buyMarket($amount, $coin_type = 1, $async = false)
     {
         //$amount 总金额
         $method = 'buy_market';
-        return $this->httpPost(compact('method', 'amount', 'coin_type'), $callback);
+        return $this->httpPost(compact('method', 'amount', 'coin_type'), $async);
     }
 
-    public function sellMarket($amount, $coin_type = 1, callable $callback = null)
+    public function sellMarket($amount, $coin_type = 1, $async = false)
     {
         $method = 'sell_market';
-        return $this->httpPost(compact('method', 'amount', 'coin_type'), $callback);
+        return $this->httpPost(compact('method', 'amount', 'coin_type'), $async);
     }
 
-    public function cancel($id, $coin_type = 1, callable $callback = null)
+    public function cancel($id, $coin_type = 1, $async = false)
     {
         $method = 'cancel_order';
-        return $this->httpPost(compact('method', 'id', 'coin_type'), $callback);
+        return $this->httpPost(compact('method', 'id', 'coin_type'), $async);
     }
 }
