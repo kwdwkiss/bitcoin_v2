@@ -3,6 +3,7 @@
 namespace Modules\Bitcoin\Console;
 
 use Illuminate\Console\Command;
+use Modules\Bitcoin\Entities\Trade;
 
 class Test extends Command
 {
@@ -17,7 +18,8 @@ class Test extends Command
 
     public function fire()
     {
-        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
-        app('bitApi')->analyzeDepth($okAsks, $okBids, $huoAsks, $huoBids);
+//        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
+//        app('bitApi')->analyzeDepth($okAsks, $okBids, $huoAsks, $huoBids);
+
     }
 }

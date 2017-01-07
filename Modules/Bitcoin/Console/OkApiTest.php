@@ -38,5 +38,8 @@ class OkApiTest extends Command
         $this->line(json_encode($cancelData));
         $cancelData = app('okRestApi')->cancel($sellData['order_id']);
         $this->line(json_encode($cancelData));
+
+        $errorData = app('okRestApi')->orderInfo(1);
+        $this->line(json_encode($errorData));
     }
 }

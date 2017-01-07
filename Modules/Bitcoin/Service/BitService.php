@@ -27,4 +27,17 @@ class BitService
         $huoAccount = Account::firstHuobi();
         return [$okAccount, $huoAccount];
     }
+
+    public function flowOkToHuo($okPrice, $huoPrice, $amount, $async = true)
+    {
+        if ($async) {
+            app('okRestApi')->sell($okPrice, $amount, true);
+        }
+
+    }
+
+    public function flowHuoToOk()
+    {
+
+    }
 }

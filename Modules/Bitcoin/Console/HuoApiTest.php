@@ -38,5 +38,8 @@ class HuoApiTest extends Command
         $this->line(json_encode($cancelData));
         $cancelData = app('huoRestApi')->cancel($sellData['id']);
         $this->line(json_encode($cancelData));
+
+        $errorData = app('huoRestApi')->orderInfo(1);
+        $this->line(json_encode($errorData));
     }
 }
