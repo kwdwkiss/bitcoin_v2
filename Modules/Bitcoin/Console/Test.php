@@ -17,8 +17,7 @@ class Test extends Command
 
     public function fire()
     {
-        list($okData, $huoData) = app('bitcoinService')->userInfo();
-        $this->line('okInfo:' . json_encode($okData));
-        $this->line('huoInfo:' . json_encode($huoData));
+        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
+        app('bitApi')->analyzeDepth($okAsks, $okBids, $huoAsks, $huoBids);
     }
 }

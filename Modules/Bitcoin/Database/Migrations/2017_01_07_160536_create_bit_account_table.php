@@ -29,12 +29,9 @@ class CreateBitAccountTable extends Migration
             $table->decimal('free_cny', 14, 4);
             $table->decimal('free_ltc', 14, 4);
 
-            $table->decimal('freezed_btc', 14, 4);
-            $table->decimal('freezed_cny', 14, 4);
-            $table->decimal('freezed_ltc', 14, 4);
-
-            $table->decimal('union_fund_btc', 14, 4);
-            $table->decimal('union_fund_ltc', 14, 4);
+            $table->decimal('froze_btc', 14, 4);
+            $table->decimal('froze_cny', 14, 4);
+            $table->decimal('froze_ltc', 14, 4);
 
             $table->timestamps();
         });

@@ -17,14 +17,16 @@ class BitcoinDatabaseSeeder extends Seeder
     {
         Model::unguard();
 
-        $account = Account::firstOkcoin();
-        if (!$account) {
+        $oKAccount = Account::firstOkcoin();
+        if (!$oKAccount) {
             Account::create(['site' => 'okcoin', 'name' => 'kwdwkiss', 'email' => 'kwdwkisscly@163.com']);
         }
-        $account = Account::firstHuobi();
-        if (!$account) {
+        $huoAccount = Account::firstHuobi();
+        if (!$huoAccount) {
             Account::create(['site' => 'huobi', 'name' => 'kwdwkiss', 'email' => 'kwdwkisscly@163.com']);
         }
+        list($oKAccount, $huoAccount) = app('bitService')->userInfo();
+        var_dump($oKAccount->toJson(), $huoAccount->toJson());
         // $this->call("OthersTableSeeder");
     }
 }

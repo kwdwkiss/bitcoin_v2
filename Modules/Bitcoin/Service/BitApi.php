@@ -53,8 +53,35 @@ class BitApi
         return [$okData, $huoData];
     }
 
-    public function analyzeDepth()
+    public function analyzeDepth($okAsks, $okBids, $huoAsks, $huoBids)
     {
+        $region = [0.01, 0.1, 0.5, 1];
 
+        $ok_ask_0 = 0;
+        $ok_ask_0_1 = 0;
+        $ok_ask_1 = 0;
+        $ok_ask_5 = 0;
+        $amountTotal = 0;
+        foreach ($okAsks as $item) {
+            $price = $item[0];
+            $amount = $item[1];
+            if ($amountTotal == 0) {
+                $ok_ask_0 = [$price, $amount];
+            }
+            if ($amountTotal <= 0.1) {
+                $ok_ask_0_1 = [$price, $amount];
+            }
+            if ($amountTotal <= 1) {
+                $ok_ask_1 = [$price, $amount];
+            }
+            if ($amountTotal <= 5) {
+                $ok_ask_5 = [$price, $amount];
+            } else {
+                break;
+            }
+            $amountTotal += $amount;
+        }
+        var_dump(json_encode($okAsks));
+        var_dump($ok_ask_0, $ok_ask_0_1, $ok_ask_1, $ok_ask_5);
     }
 }
