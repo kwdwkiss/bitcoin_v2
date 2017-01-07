@@ -30,12 +30,12 @@ class OkService
     {
         if ($async) {
             return app('okRestApi')->sell($price, $amount, true)->then(function ($data) use ($price, $amount) {
-                $trade = Trade::createOk($data, $price, $amount, 'buy');
+                $trade = Trade::createOk($data, $price, $amount, 'sell');
                 return new FulfilledPromise($trade);
             });
         } else {
             $data = app('okRestApi')->sell($price, $amount);
-            return Trade::createOk($data, $price, $amount, 'buy');
+            return Trade::createOk($data, $price, $amount, 'sell');
         }
     }
 
