@@ -18,8 +18,9 @@ class Test extends Command
 
     public function fire()
     {
-        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
-        app('bitApi')->analyzeDepth($okAsks, $okBids, $huoAsks, $huoBids);
+//        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
+//        app('bitApi')->analyzeDepth($okAsks, $okBids, $huoAsks, $huoBids);
 
+        app('bitService')->zeroFlow();
     }
 }

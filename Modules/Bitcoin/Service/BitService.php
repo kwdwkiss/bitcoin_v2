@@ -8,6 +8,7 @@
 namespace Modules\Bitcoin\Service;
 
 use Modules\Bitcoin\Entities\Account;
+use Modules\Bitcoin\Entities\Flow;
 
 class BitService
 {
@@ -63,7 +64,7 @@ class BitService
             $huoTrade = app('huoService')->buy($huoPrice, $amount);
             $okTrade = app('okService')->sell($okPrice, $amount);
         }
-        return [$okTrade, $huoTrade];
+        return Flow::createOkToHuo($okTrade, $huoTrade);
     }
 
     public function flowHuoToOk($okPrice, $huoPrice, $amount, $async = true)
@@ -75,14 +76,28 @@ class BitService
             $huoTrade = app('huoService')->sell($huoPrice, $amount);
             $okTrade = app('okService')->buy($okPrice, $amount);
         }
-        return [$okTrade, $huoTrade];
+        return Flow::createHuoToOk($huoTrade, $okTrade);
     }
 
     public function zeroFlow()
     {
         list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
-        if($okAsks[0][0]){
+        $okAsk0 = $okAsks[0][0];
+        $okBid0 = $okBids[0][0];
+        $huoAsk0 = $huoAsks[0][0];
+        $huoBid0 = $huoBids[0][0];
 
+        $okDiff = $okAsk0 - $huoBid0;
+        $huoDiff = $huoAsk0 - $okBid0;
+        if ($okDiff > 0) {
+            $factor = $okDiff / 2;
+            $okPrice = $okAsk0 - $factor;
+            $huoPrice = $huoBid0 + $factor;
+            print_r(['ok', $okDiff, $factor, $okAsk0, $huoBid0, $okPrice, $huoPrice]);
+            //$flow = $this->flowOkToHuo($okPrice, $huoPrice, 0.01);
+            //var_dump($flow->toJson());
+        } elseif ($huoDiff > 0) {
+            var_dump('huo', $huoDiff);
         }
     }
 }

@@ -39,10 +39,10 @@ class BitApi
     public function getDepth($depth = 15)
     {
         list($okData, $huoData) = $this->multi('getDepth');
-        $okAsks = array_slice($okData['asks'], 0, $depth);
-        $okBids = array_slice($okData['bids'], 0, $depth);
-        $huoAsks = array_slice(array_reverse($huoData['asks']), 0, $depth);
-        $huoBids = array_slice($huoData['bids'], 0, $depth);
+        $okAsks = collect($okData['asks'])->sortBy(0)->values()->slice(0, $depth);
+        $okBids = collect($okData['bids'])->sortByDesc(0)->values()->slice(0, $depth);
+        $huoAsks = collect($huoData['asks'])->sortBy(0)->values()->slice(0, $depth);
+        $huoBids = collect($huoData['bids'])->sortByDesc(0)->values()->slice(0, $depth);
         return [$okAsks, $okBids, $huoAsks, $huoBids];
     }
 
