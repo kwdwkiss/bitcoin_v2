@@ -6,9 +6,9 @@ use Illuminate\Console\Command;
 use Modules\Bitcoin\Entities\Flow;
 use Modules\Bitcoin\Entities\Trade;
 
-class Test extends Command
+class FlowZero extends Command
 {
-    protected $signature = 'test';
+    protected $signature = 'flowZero {amount=0.01}';
 
     protected $description = 'Command description.';
 
@@ -19,10 +19,8 @@ class Test extends Command
 
     public function fire()
     {
-//        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
-//        app('bitApi')->analyzeDepth($okAsks, $okBids, $huoAsks, $huoBids);
-
-        $flow = app('bitService')->flowZero();
+        $amount = $this->argument('amount');
+        $flow = app('bitService')->flowZero($amount);
         app('bitService')->flowOrderInfo($flow);
     }
 }

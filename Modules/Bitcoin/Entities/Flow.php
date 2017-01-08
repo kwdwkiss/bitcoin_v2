@@ -8,9 +8,28 @@ class Flow extends Model
 {
     protected $table = 'bit_flow';
 
-    protected $fillable = ['type', 's_target', 's_order_id', 's_type', 's_status', 's_price', 's_avg_price', 's_amount', 's_deal_amount',
+    protected $fillable = ['type', 'bid', 'ask', 'diff', 'diff_avg',
+        's_target', 's_order_id', 's_type', 's_status', 's_price', 's_avg_price', 's_amount', 's_deal_amount',
         'b_target', 'b_order_id', 'b_type', 'b_status', 'b_price', 'b_avg_price', 'b_amount', 'b_deal_amount'
     ];
+
+    public function _sTrade()
+    {
+        if ($this->type == 1) {
+            return $this->belongsTo(Trade::class, 's_order_id', 'order_id')->where('site', 'ok');
+        } else {
+            return $this->belongsTo(Trade::class, 's_order_id', 'order_id')->where('site', 'huo');
+        }
+    }
+
+    public function _bTrade()
+    {
+        if ($this->type == 1) {
+            return $this->belongsTo(Trade::class, 'b_order_id', 'order_id')->where('site', 'huo');
+        } else {
+            return $this->belongsTo(Trade::class, 'b_order_id', 'order_id')->where('site', 'ok');
+        }
+    }
 
     public static function createForTrade($type, $s_trade, $b_trade)
     {
@@ -37,6 +56,19 @@ class Flow extends Model
         return static::createForTrade(2, $s_trade, $b_trade);
     }
 
+    public function updateDiff($diff)
+    {
+        $this->update(['diff' => $diff]);
+        return $this;
+    }
+
+    public function updateDiffAvg()
+    {
+        if ($this->s_status == 2 && $this->b_status == 2) {
+            $this->update(['diff_avg' => $this->s_avg_price - $this->b_avg_price]);
+        }
+    }
+
     public function updateSellTrade($s_trade)
     {
         $this->update([
@@ -49,6 +81,7 @@ class Flow extends Model
             's_amount' => $s_trade->amount,
             's_deal_amount' => $s_trade->deal_amount,
         ]);
+        $this->updateDiffAvg();
     }
 
     public function updateBuyTrade($b_trade)
@@ -63,5 +96,6 @@ class Flow extends Model
             'b_amount' => $b_trade->amount,
             'b_deal_amount' => $b_trade->deal_amount,
         ]);
+        $this->updateDiffAvg();
     }
 }

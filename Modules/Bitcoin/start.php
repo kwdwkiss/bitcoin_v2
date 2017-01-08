@@ -13,3 +13,11 @@
 */
 
 require __DIR__ . '/Http/routes.php';
+
+function myLog($msg = null, array $context = [])
+{
+    $time = sprintf('%.4f', microtime(true));
+    print_r(['msg' => $msg] + $context);
+    print_r("\n");
+    logger("[$time] $msg", $context);
+}
