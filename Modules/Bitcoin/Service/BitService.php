@@ -59,6 +59,7 @@ class BitService
 
     public function flowOkToHuo($okPrice, $huoPrice, $amount, $async = true)
     {
+        $this->flowOkToHuoCheck($okPrice, $huoPrice, $amount);
         if ($async) {
             list($okTrade, $huoTrade) = $this->multi(app('okService')->sell($okPrice, $amount, true),
                 app('huoService')->buy($huoPrice, $amount, true));
@@ -71,6 +72,7 @@ class BitService
 
     public function flowHuoToOk($huoPrice, $okPrice, $amount, $async = true)
     {
+        $this->flowHuoToOkCheck($huoPrice, $okPrice, $amount);
         if ($async) {
             list($okTrade, $huoTrade) = $this->multi(app('okService')->buy($okPrice, $amount, true),
                 app('huoService')->sell($huoPrice, $amount, true));
@@ -83,6 +85,7 @@ class BitService
 
     public function flowOrderInfo(Flow $flow)
     {
+        $status = $flow->getStatus();
         $s_trade = $flow->_sTrade;
         $b_trade = $flow->_bTrade;
         if ($s_trade && $flow->s_target == 'ok') {
@@ -100,6 +103,9 @@ class BitService
         }
         if ($b_trade) {
             $flow->updateBuyTrade($b_trade);
+        }
+        if ($status != $flow->getStatus()) {
+            $this->syncAccount();
         }
         myLog('flowOrderInfo', $flow->toArray());
     }

@@ -102,4 +102,9 @@ class Flow extends Model
         ]);
         $this->updateDiffAvg();
     }
+
+    public function getStatus()
+    {
+        return $this->s_status . $this->b_status;
+    }
 }
