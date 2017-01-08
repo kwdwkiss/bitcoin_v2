@@ -33,7 +33,6 @@ class BitApi
         if ($huoException instanceof \Exception) {
             throw $huoException;
         }
-        \GuzzleHttp\Promise\settle($promise)->wait();
         return [$okData, $huoData];
     }
 
