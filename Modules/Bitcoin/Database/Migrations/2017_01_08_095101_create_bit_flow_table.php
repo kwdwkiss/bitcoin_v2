@@ -16,6 +16,8 @@ class CreateBitFlowTable extends Migration
             $table->increments('id');
 
             $table->integer('type');//1-okToHuo 2-huoToOk
+            $table->decimal('bid', 10, 4);
+            $table->decimal('ask', 10, 4);
             $table->decimal('diff', 10, 4);
             $table->decimal('diff_avg', 10, 4);
 

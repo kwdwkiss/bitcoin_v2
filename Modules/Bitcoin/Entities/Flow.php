@@ -56,9 +56,13 @@ class Flow extends Model
         return static::createForTrade(2, $s_trade, $b_trade);
     }
 
-    public function updateDiff($diff)
+    public function updateDiff($bid, $ask, $diff)
     {
-        $this->update(['diff' => $diff]);
+        $this->update([
+            'bid' => $bid,
+            'ask' => $ask,
+            'diff' => $diff
+        ]);
         return $this;
     }
 

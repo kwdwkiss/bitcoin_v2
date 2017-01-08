@@ -21,8 +21,5 @@ class Test extends Command
     {
 //        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
 //        app('bitApi')->analyzeDepth($okAsks, $okBids, $huoAsks, $huoBids);
-
-        $flow = app('bitService')->flowZero();
-        app('bitService')->flowOrderInfo($flow);
     }
 }

@@ -114,19 +114,19 @@ class BitService
 
         $okDiff = $okBid0 - $huoAsk0;
         $huoDiff = $huoBid0 - $okAsk0;
-        myLog('zeroFlow', compact('okAsk0', 'okBid0', 'huoAsk0', 'huoBid0', 'okDiff', 'huoDiff'));
+        myLog('flowZero', compact('okAsk0', 'okBid0', 'huoAsk0', 'huoBid0', 'okDiff', 'huoDiff'));
         if ($okDiff > 0) {
             $factor = $okDiff / 2;
             $okPrice = sprintf("%.2f", $okBid0 - $factor);
             $huoPrice = sprintf("%.2f", $huoAsk0 + $factor);
             myLog('okTohuo', compact('okDiff', 'factor', 'okBid0', 'huoAsk0', 'okPrice', 'huoPrice'));
-            return $this->flowOkToHuo($okPrice, $huoPrice, $amount)->updateDiff($okDiff);
+            return $this->flowOkToHuo($okPrice, $huoPrice, $amount)->updateDiff($okBid0, $huoAsk0, $okDiff);
         } elseif ($huoDiff > 0) {
             $factor = $huoDiff / 2;
             $huoPrice = sprintf("%.2f", $huoBid0 - $factor);
             $okPrice = sprintf("%.2f", $okAsk0 + $factor);
             myLog('huoToOk', compact('huoDiff', 'factor', 'huoBid0', 'okAsk0', 'huoPrice', 'okPrice'));
-            return $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoPrice);
+            return $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid0, $okAsk0, $huoPrice);
         }
     }
 }

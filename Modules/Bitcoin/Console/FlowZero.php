@@ -21,6 +21,6 @@ class FlowZero extends Command
     {
         $amount = $this->argument('amount');
         $flow = app('bitService')->flowZero($amount);
-        app('bitService')->flowOrderInfo($flow);
+        $flow && app('bitService')->flowOrderInfo($flow);
     }
 }
