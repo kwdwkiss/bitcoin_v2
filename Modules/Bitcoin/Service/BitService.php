@@ -49,10 +49,10 @@ class BitService
             $item->wait();
         }
         if ($exception1 instanceof \Exception) {
-            myLog('multi.1', [$exception1->getCode(), $exception1->getMessage()]);
+            myLog('multi.1.error', [$exception1->getCode(), $exception1->getMessage()]);
         }
         if ($exception2 instanceof \Exception) {
-            myLog('multi.2', [$exception2->getCode(), $exception2->getMessage()]);
+            myLog('multi.2.error', [$exception2->getCode(), $exception2->getMessage()]);
         }
         return [$promise1Data, $promise2Data];
     }

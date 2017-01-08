@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 
 class SyncAccount extends Command
 {
-    protected $signature = 'getAccount';
+    protected $signature = 'syncAccount';
 
     protected $description = 'Command description.';
 
