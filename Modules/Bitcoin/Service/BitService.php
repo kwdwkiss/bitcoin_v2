@@ -129,4 +129,30 @@ class BitService
             return $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid0, $okAsk0, $huoPrice);
         }
     }
+
+    public function flowOkToHuoCheck($okPrice, $huoPrice, $amount)
+    {
+        list($okAccount, $huoAccount) = $this->getAccount();
+        if ($okAccount->free_btc < $amount) {
+            myLog('flowOkToHuoCheck.ok.btc.not.enough', compact('okPrice', 'huoPrice', 'amount'));
+            throw new \Exception('flowOkToHuoCheck.ok.btc.not.enough');
+        }
+        if ($huoAccount->free_cny < $huoPrice * $amount) {
+            myLog('flowOkToHuoCheck.huo.cny.not.enough', compact('okPrice', 'huoPrice', 'amount'));
+            throw new \Exception('flowOkToHuoCheck.huo.cny.not.enough');
+        }
+    }
+
+    public function flowHuoToOkCheck($huoPrice, $okPrice, $amount)
+    {
+        list($okAccount, $huoAccount) = $this->getAccount();
+        if ($huoAccount->free_btc < $amount) {
+            myLog('flowHuoToOkCheck.huo.btc.not.enough', compact('huoPrice', 'okPrice', 'amount'));
+            throw new \Exception('flowHuoToOkCheck.huo.btc.not.enough');
+        }
+        if ($okAccount->free_cny < $okPrice * $amount) {
+            myLog('flowHuoToOkCheck.ok.cny.not.enough', compact('huoPrice', 'okPrice', 'amount'));
+            throw new \Exception('flowHuoToOkCheck.ok.cny.not.enough');
+        }
+    }
 }
