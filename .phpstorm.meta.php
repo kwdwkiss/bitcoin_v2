@@ -3,7 +3,7 @@ namespace PHPSTORM_META {
 
    /**
     * PhpStorm Meta file, to provide autocomplete information for PhpStorm
-    * Generated on 2017-01-07.
+    * Generated on 2017-01-09.
     *
     * @author Barry vd. Heuvel <barryvdh@gmail.com>
     * @see https://github.com/barryvdh/laravel-ide-helper
@@ -130,6 +130,7 @@ namespace PHPSTORM_META {
             'command.queue.listen' instanceof \Illuminate\Queue\Console\ListenCommand,
             'queue.listener' instanceof \Illuminate\Queue\Listener,
             'queue.failer' instanceof \Illuminate\Queue\Failed\DatabaseFailedJobProvider,
+            'redis' instanceof \Illuminate\Redis\Database,
             'auth.password' instanceof \Illuminate\Auth\Passwords\PasswordBrokerManager,
             'auth.password.broker' instanceof \Illuminate\Auth\Passwords\PasswordBroker,
             'validation.presence' instanceof \Illuminate\Validation\DatabasePresenceVerifier,
@@ -255,6 +256,7 @@ namespace PHPSTORM_META {
             'command.queue.listen' instanceof \Illuminate\Queue\Console\ListenCommand,
             'queue.listener' instanceof \Illuminate\Queue\Listener,
             'queue.failer' instanceof \Illuminate\Queue\Failed\DatabaseFailedJobProvider,
+            'redis' instanceof \Illuminate\Redis\Database,
             'auth.password' instanceof \Illuminate\Auth\Passwords\PasswordBrokerManager,
             'auth.password.broker' instanceof \Illuminate\Auth\Passwords\PasswordBroker,
             'validation.presence' instanceof \Illuminate\Validation\DatabasePresenceVerifier,
@@ -380,6 +382,7 @@ namespace PHPSTORM_META {
             'command.queue.listen' instanceof \Illuminate\Queue\Console\ListenCommand,
             'queue.listener' instanceof \Illuminate\Queue\Listener,
             'queue.failer' instanceof \Illuminate\Queue\Failed\DatabaseFailedJobProvider,
+            'redis' instanceof \Illuminate\Redis\Database,
             'auth.password' instanceof \Illuminate\Auth\Passwords\PasswordBrokerManager,
             'auth.password.broker' instanceof \Illuminate\Auth\Passwords\PasswordBroker,
             'validation.presence' instanceof \Illuminate\Validation\DatabasePresenceVerifier,
@@ -505,6 +508,7 @@ namespace PHPSTORM_META {
             'command.queue.listen' instanceof \Illuminate\Queue\Console\ListenCommand,
             'queue.listener' instanceof \Illuminate\Queue\Listener,
             'queue.failer' instanceof \Illuminate\Queue\Failed\DatabaseFailedJobProvider,
+            'redis' instanceof \Illuminate\Redis\Database,
             'auth.password' instanceof \Illuminate\Auth\Passwords\PasswordBrokerManager,
             'auth.password.broker' instanceof \Illuminate\Auth\Passwords\PasswordBroker,
             'validation.presence' instanceof \Illuminate\Validation\DatabasePresenceVerifier,
