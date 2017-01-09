@@ -3,11 +3,10 @@
 namespace Modules\Bitcoin\Console;
 
 use Illuminate\Console\Command;
-use Modules\Core\Entities\Config;
 
-class Test extends Command
+class LoopDepth extends Command
 {
-    protected $signature = 'test';
+    protected $signature = 'loopDepth';
 
     protected $description = 'Command description.';
 
@@ -18,6 +17,6 @@ class Test extends Command
 
     public function fire()
     {
-
+        app('bitService')->loopDepth();
     }
 }

@@ -40,6 +40,15 @@ class BitService
         return Depth::createForDepth($okAsk, $okBid, $huoAsk, $huoBid);
     }
 
+    public function loopDepth()
+    {
+        while (true) {
+            $start = microtime(true);
+            $this->getDepth();
+            sleepTo($start, 0.5, false);
+        }
+    }
+
     public function multi($promise1, $promise2)
     {
         $promise1Data = null;
