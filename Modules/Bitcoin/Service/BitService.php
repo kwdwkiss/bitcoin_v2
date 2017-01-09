@@ -44,7 +44,8 @@ class BitService
     {
         while (true) {
             $start = microtime(true);
-            $this->getDepth();
+            $depth = $this->getDepth();
+            Depth::clear($depth->id, 10);
             sleepTo($start, 0.5, false);
         }
     }

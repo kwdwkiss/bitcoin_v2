@@ -23,4 +23,9 @@ class Depth extends Model
             'huoBid' => $huoBid
         ])->fresh();
     }
+
+    public static function clear($id, $length)
+    {
+        static::where('id', '<', $id - $length)->delete();
+    }
 }
