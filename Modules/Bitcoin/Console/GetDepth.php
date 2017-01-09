@@ -22,5 +22,8 @@ class GetDepth extends Command
         $this->line('ok_bids:' . json_encode($okBids));
         $this->line('huo_asks:' . json_encode($huoAsks));
         $this->line('huo_bids:' . json_encode($huoBids));
+
+        $depth = app('bitService')->getDepth();
+        $this->line($depth->toJson());
     }
 }

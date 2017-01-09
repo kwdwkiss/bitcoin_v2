@@ -8,6 +8,7 @@
 namespace Modules\Bitcoin\Service;
 
 use Modules\Bitcoin\Entities\Account;
+use Modules\Bitcoin\Entities\Depth;
 use Modules\Bitcoin\Entities\Flow;
 
 class BitService
@@ -27,6 +28,16 @@ class BitService
         $okAccount = Account::firstOkcoin();
         $huoAccount = Account::firstHuobi();
         return [$okAccount, $huoAccount];
+    }
+
+    public function getDepth()
+    {
+        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
+        $okAsk = $okAsks[0][0];
+        $okBid = $okBids[0][0];
+        $huoAsk = $huoAsks[0][0];
+        $huoBid = $huoBids[0][0];
+        return Depth::createForDepth($okAsk, $okBid, $huoAsk, $huoBid);
     }
 
     public function multi($promise1, $promise2)
@@ -112,27 +123,26 @@ class BitService
 
     public function flowZero($amount = 0.01)
     {
-        list($okAsks, $okBids, $huoAsks, $huoBids) = app('bitApi')->getDepth();
-        $okAsk0 = $okAsks[0][0];
-        $okBid0 = $okBids[0][0];
-        $huoAsk0 = $huoAsks[0][0];
-        $huoBid0 = $huoBids[0][0];
-
-        $okDiff = $okBid0 - $huoAsk0;
-        $huoDiff = $huoBid0 - $okAsk0;
-        myLog('flowZero', compact('okAsk0', 'okBid0', 'huoAsk0', 'huoBid0', 'okDiff', 'huoDiff'));
+        $depth = $this->getDepth();
+        $okAsk = $depth->okAsk;
+        $okBid = $depth->okBid;
+        $huoAsk = $depth->huoAsk;
+        $huoBid = $depth->huoBid;
+        $okDiff = $depth->okDiff;
+        $huoDiff = $depth->huoDiff;
+        myLog('flowZero', compact('okAsk', 'okBid', 'huoAsk', 'huoBid', 'okDiff', 'huoDiff'));
         if ($okDiff > 0) {
             $factor = $okDiff / 2;
-            $okPrice = sprintf("%.2f", $okBid0 - $factor);
-            $huoPrice = sprintf("%.2f", $huoAsk0 + $factor);
-            myLog('okTohuo', compact('okDiff', 'factor', 'okBid0', 'huoAsk0', 'okPrice', 'huoPrice'));
-            return $this->flowOkToHuo($okPrice, $huoPrice, $amount)->updateDiff($okBid0, $huoAsk0, $okDiff);
+            $okPrice = sprintf("%.2f", $okBid - $factor);
+            $huoPrice = sprintf("%.2f", $huoAsk + $factor);
+            myLog('okTohuo', compact('okDiff', 'factor', 'okBid', 'huoAsk', 'okPrice', 'huoPrice'));
+            return $this->flowOkToHuo($okPrice, $huoPrice, $amount)->updateDiff($okBid, $huoAsk, $okDiff);
         } elseif ($huoDiff > 0) {
             $factor = $huoDiff / 2;
-            $huoPrice = sprintf("%.2f", $huoBid0 - $factor);
-            $okPrice = sprintf("%.2f", $okAsk0 + $factor);
-            myLog('huoToOk', compact('huoDiff', 'factor', 'huoBid0', 'okAsk0', 'huoPrice', 'okPrice'));
-            return $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid0, $okAsk0, $huoPrice);
+            $huoPrice = sprintf("%.2f", $huoBid - $factor);
+            $okPrice = sprintf("%.2f", $okAsk + $factor);
+            myLog('huoToOk', compact('huoDiff', 'factor', 'huoBid', 'okAsk', 'huoPrice', 'okPrice'));
+            return $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoPrice);
         }
     }
 
