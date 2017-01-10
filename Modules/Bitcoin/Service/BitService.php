@@ -10,6 +10,7 @@ namespace Modules\Bitcoin\Service;
 use Modules\Bitcoin\Entities\Account;
 use Modules\Bitcoin\Entities\Depth;
 use Modules\Bitcoin\Entities\Flow;
+use Modules\Core\Entities\Config;
 
 class BitService
 {
@@ -45,7 +46,11 @@ class BitService
         while (true) {
             $start = microtime(true);
             $depth = $this->getDepth();
-            Depth::clear($depth->id, 10);
+            Depth::clear($depth->id, 120);
+            $time = time();
+            $avgOkDiff = Depth::avg('okDiff');
+            $avgHuoDiff = Depth::avg('huoDiff');
+            Config::set('bit.avgDepth', compact('avgOkDiff', 'avgHuoDiff', 'time'));
             sleepTo($start, 0.5, false);
         }
     }

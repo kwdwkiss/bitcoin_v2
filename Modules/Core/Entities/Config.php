@@ -24,9 +24,7 @@ class Config extends Model
     {
         $config = static::where('key', $key)->first();
         if ($config) {
-            $config->where('key', $key)->update([
-                'value' => $value,
-            ]);
+            $config->update(['value' => $value,]);
         } else {
             static::create([
                 'key' => $key,
