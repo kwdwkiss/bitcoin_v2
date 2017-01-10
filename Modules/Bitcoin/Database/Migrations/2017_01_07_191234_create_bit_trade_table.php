@@ -20,6 +20,7 @@ class CreateBitTradeTable extends Migration
             $table->string('type');//buy sell buy_market sell_market
             //ok: -1-已撤销 0-未成交 1-部分成交 2-完全成交 4-撤单处理中
             //huo:0未成交　1部分成交　2已完成　3已取消 4废弃（该状态已不再使用） 5异常 6部分成交已取消 7队列中
+            //status:0-未成交 1-部分成交 2-完全成交 3-已撤销 4-撤单处理中 5异常 6部分成交已取消 7队列中
             $table->integer('status');
             $table->decimal('price', 10, 4);//委托价格
             $table->decimal('avg_price', 10, 4);//成交均价

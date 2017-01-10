@@ -47,8 +47,8 @@ class BitService
         while (true) {
             $start = microtime(true);
             $depth = $this->getDepth();
-            $result = $this->statDepth($depth, $length);
-            Config::set('bit.depth.stat', $result);
+            $stat = $this->statDepth($depth, $length);
+            Config::set('bit.depth.stat', $stat);
             sleepTo($start, $sleep, false);
         }
     }
@@ -133,6 +133,26 @@ class BitService
         return Flow::createHuoToOk($huoTrade, $okTrade);
     }
 
+    public function flowCancel(Flow $flow)
+    {
+        $this->flowOrderInfo($flow);
+        if ($flow->s_order_id && $flow->s_status == 0) {
+            if ($flow->s_target == 'ok') {
+                app('okService')->cancel($flow->_sTrade);
+            } else {
+                app('huoService')->cancel($flow->_sTrade);
+            }
+        }
+        if ($flow->b_order_id && $flow->b_status == 0) {
+            if ($flow->b_target == 'ok') {
+                app('okService')->cancel($flow->_bTrade);
+            } else {
+                app('huoService')->cancel($flow->_bTrade);
+            }
+        }
+        $this->flowOrderInfo($flow);
+    }
+
     public function flowOrderInfo(Flow $flow)
     {
         $status = $flow->getStatus();
@@ -160,6 +180,19 @@ class BitService
         myLog('flowOrderInfo', $flow->toArray());
     }
 
+    public function flowTask()
+    {
+        $task = Config::get('bit.flow.task');
+        switch ($task['tag']) {
+            case 'flowZero':
+                break;
+            case 'flowOrderInfo':
+                break;
+            case 'flowCancel':
+                break;
+        }
+    }
+
     public function flowZero($amount = 0.01)
     {
         $depth = $this->getDepth();
@@ -170,19 +203,24 @@ class BitService
         $okDiff = $depth->okDiff;
         $huoDiff = $depth->huoDiff;
         myLog('flowZero', compact('okAsk', 'okBid', 'huoAsk', 'huoBid', 'okDiff', 'huoDiff'));
+        $flow = null;
         if ($okDiff > 0) {
             $factor = $okDiff / 2;
             $okPrice = sprintf("%.2f", $okBid - $factor);
             $huoPrice = sprintf("%.2f", $huoAsk + $factor);
             myLog('okTohuo', compact('okDiff', 'factor', 'okBid', 'huoAsk', 'okPrice', 'huoPrice'));
-            return $this->flowOkToHuo($okPrice, $huoPrice, $amount)->updateDiff($okBid, $huoAsk, $okDiff);
+            $flow = $this->flowOkToHuo($okPrice, $huoPrice, $amount)->updateDiff($okBid, $huoAsk, $okDiff);
         } elseif ($huoDiff > 0) {
             $factor = $huoDiff / 2;
             $huoPrice = sprintf("%.2f", $huoBid - $factor);
             $okPrice = sprintf("%.2f", $okAsk + $factor);
             myLog('huoToOk', compact('huoDiff', 'factor', 'huoBid', 'okAsk', 'huoPrice', 'okPrice'));
-            return $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoPrice);
+            $flow = $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoPrice);
         }
+        Config::set('bit.flow.task', [
+            'tag' => 'flowZero',
+            'flowId' => $flow->id,
+        ]);
     }
 
     public function flowOkToHuoCheck($okPrice, $huoPrice, $amount)

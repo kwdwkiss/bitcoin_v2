@@ -107,4 +107,9 @@ class Flow extends Model
     {
         return $this->s_status . $this->b_status;
     }
+
+    public function isDone()
+    {
+        return $this->getStatus() == '22';
+    }
 }

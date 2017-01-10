@@ -41,8 +41,14 @@ class Trade extends Model
     public function updateOk($data)
     {
         $okData = $data['orders'][0];
+        $status = $okData['status'];
+        switch ($status) {
+            case '-1':
+                $status = 3;
+                break;
+        }
         return $this->update([
-            'status' => $okData['status'],
+            'status' => $status,
             'avg_price' => $okData['avg_price'],
             'deal_amount' => $okData['deal_amount'],
         ]);
