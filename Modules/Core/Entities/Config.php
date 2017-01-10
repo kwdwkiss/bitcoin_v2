@@ -8,6 +8,8 @@ class Config extends Model
 {
     protected $table = 'core_config';
 
+    protected $primaryKey = 'key';
+
     protected $fillable = ['key', 'value'];
 
     protected $casts = [
@@ -16,13 +18,13 @@ class Config extends Model
 
     public static function get($key, $default = null)
     {
-        $config = static::where('key', $key)->first();
+        $config = static::find($key);
         return $config ? $config->value : $default;
     }
 
     public static function set($key, $value)
     {
-        $config = static::where('key', $key)->first();
+        $config = static::find($key);
         if ($config) {
             $config->update(['value' => $value,]);
         } else {

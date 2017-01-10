@@ -47,13 +47,36 @@ class BitService
         while (true) {
             $start = microtime(true);
             $depth = $this->getDepth();
-            Depth::clear($depth->id, $length);
-            $time = time();
-            $avgOkDiff = Depth::avg('okDiff');
-            $avgHuoDiff = Depth::avg('huoDiff');
-            Config::set('bit.avgDepth', compact('avgOkDiff', 'avgHuoDiff', 'time'));
+            $result = $this->statDepth($depth, $length);
+            Config::set('bit.depth.stat', $result);
             sleepTo($start, $sleep, false);
         }
+    }
+
+    public function statDepth($depth, $length)
+    {
+        Depth::clear($depth->id, $length);
+        $time = time();
+        $avg_ok = Depth::avg('okDiff');
+        $avg_huo = Depth::avg('huoDiff');
+
+        $avg_ok_diff = $depth->okDiff - $avg_ok;
+        $avg_huo_diff = $depth->huoDiff - $avg_huo;
+
+        $depths = $depth->get();
+        $sum_D_ok = 0;
+        $sum_D_huo = 0;
+        foreach ($depths as $item) {
+            $sum_D_ok += pow($item->okDiff - $avg_ok, 2);
+            $sum_D_huo += pow($item->huoDiff - $avg_huo, 2);
+        }
+        $D_ok = $sum_D_ok / $depths->count();
+        $D_huo = $sum_D_huo / $depths->count();
+        $S_ok = sqrt($D_ok);
+        $S_huo = sqrt($D_huo);
+        $result = compact('avg_ok', 'avg_huo', 'D_ok', 'D_huo',
+            'S_ok', 'S_huo', 'avg_ok_diff', 'avg_huo_diff', 'time');
+        return $result;
     }
 
     public function multi($promise1, $promise2)
