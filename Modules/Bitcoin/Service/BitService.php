@@ -41,17 +41,18 @@ class BitService
         return Depth::createForDepth($okAsk, $okBid, $huoAsk, $huoBid);
     }
 
-    public function loopDepth()
+    public function loopDepth($sleep = 0.5, $length = 120)
     {
+        Depth::truncate();
         while (true) {
             $start = microtime(true);
             $depth = $this->getDepth();
-            Depth::clear($depth->id, 120);
+            Depth::clear($depth->id, $length);
             $time = time();
             $avgOkDiff = Depth::avg('okDiff');
             $avgHuoDiff = Depth::avg('huoDiff');
             Config::set('bit.avgDepth', compact('avgOkDiff', 'avgHuoDiff', 'time'));
-            sleepTo($start, 0.5, false);
+            sleepTo($start, $sleep, false);
         }
     }
 

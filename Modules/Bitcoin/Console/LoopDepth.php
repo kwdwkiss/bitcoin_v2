@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 
 class LoopDepth extends Command
 {
-    protected $signature = 'loopDepth';
+    protected $signature = 'loopDepth {--sleep=0.5} {--length=120}';
 
     protected $description = 'Command description.';
 
@@ -17,6 +17,8 @@ class LoopDepth extends Command
 
     public function fire()
     {
-        app('bitService')->loopDepth();
+        $sleep = $this->option('sleep');
+        $length = $this->option('length');
+        app('bitService')->loopDepth($sleep, $length);
     }
 }
