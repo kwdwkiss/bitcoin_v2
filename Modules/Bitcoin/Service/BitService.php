@@ -183,12 +183,42 @@ class BitService
     public function flowTask()
     {
         $task = Config::get('bit.flow.task');
+        $flow = Flow::find($task['flowId']);
+        $try = 0;
         switch ($task['tag']) {
             case 'flowZero':
-                break;
-            case 'flowOrderInfo':
+                while (true) {
+                    if ($flow->isDone() || $flow->isBadDouble()) {
+                        Config::del('bit.flow.task');
+                        return;
+                    }
+                    if ($try >= 5) {
+                        $task['tag'] = 'flowCancel';
+                        Config::set('bit.flow.task', $task);
+                        return;
+                    }
+                    $start = microtime(true);
+                    $this->flowOrderInfo($flow);
+                    $try++;
+                    sleepTo($start, 1);
+                }
                 break;
             case 'flowCancel':
+                while (true) {
+                    if (!$flow->isOrder()) {
+                        if ($flow->isTradeSingle()) {
+
+                        } else {
+                            throw new \Exception('');
+                        }
+                    }
+                    $start = microtime(true);
+                    $this->flowCancel($flow);
+                    $try++;
+                    sleepTo($start, 1);
+                }
+                break;
+            case 'CancelOrderInfo':
                 break;
         }
     }
@@ -217,10 +247,12 @@ class BitService
             myLog('huoToOk', compact('huoDiff', 'factor', 'huoBid', 'okAsk', 'huoPrice', 'okPrice'));
             $flow = $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoPrice);
         }
-        Config::set('bit.flow.task', [
-            'tag' => 'flowZero',
-            'flowId' => $flow->id,
-        ]);
+        if ($flow) {
+            Config::set('bit.flow.task', [
+                'tag' => 'flowZero',
+                'flowId' => $flow->id,
+            ]);
+        }
     }
 
     public function flowOkToHuoCheck($okPrice, $huoPrice, $amount)

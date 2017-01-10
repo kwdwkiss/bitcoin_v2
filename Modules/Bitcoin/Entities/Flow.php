@@ -108,8 +108,62 @@ class Flow extends Model
         return $this->s_status . $this->b_status;
     }
 
+    public function isBadSingle()
+    {
+        if ($this->s_order_id == 0 && $this->b_order_id != 0) {
+            return true;
+        } elseif ($this->s_order_id != 0 && $this->b_order_id == 0) {
+            return true;
+        }
+        return false;
+    }
+
+    public function isBadDouble()
+    {
+        if ($this->s_order_id == 0 && $this->b_order_id == 0) {
+            return true;
+        }
+        return false;
+    }
+
     public function isDone()
     {
         return $this->getStatus() == '22';
+    }
+
+    public function isTradeSingle()
+    {
+        if ($this->s_status == 2 && $this->b_status != 2) {
+            return true;
+        } elseif ($this->s_status != 2 && $this->b_status == 2) {
+            return true;
+        }
+        return false;
+    }
+
+    public function isOrder()
+    {
+        if ($this->isOrderSingle() || $this->isOrderDouble()) {
+            return true;
+        }
+        return false;
+    }
+
+    public function isOrderSingle()
+    {
+        if ($this->s_order_id && $this->s_status == 0 && $this->b_status != 0) {
+            return true;
+        } elseif ($this->s_status != 0 && $this->b_order_id && $this->b_status == 0) {
+            return true;
+        }
+        return false;
+    }
+
+    public function isOrderDouble()
+    {
+        if ($this->s_order_id && $this->s_order_id == 0 && $this->b_order_id && $this->b_order_id == 0) {
+            return true;
+        }
+        return false;
     }
 }
