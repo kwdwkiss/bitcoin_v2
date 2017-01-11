@@ -10,7 +10,8 @@ class Flow extends Model
 
     protected $fillable = ['type', 'bid', 'ask', 'diff', 'diff_avg',
         's_target', 's_order_id', 's_type', 's_status', 's_price', 's_avg_price', 's_amount', 's_deal_amount',
-        'b_target', 'b_order_id', 'b_type', 'b_status', 'b_price', 'b_avg_price', 'b_amount', 'b_deal_amount'
+        'b_target', 'b_order_id', 'b_type', 'b_status', 'b_price', 'b_avg_price', 'b_amount', 'b_deal_amount',
+        'l_target', 'l_order_id', 'l_type', 'l_status', 'l_price', 'l_avg_price', 'l_amount', 'l_deal_amount'
     ];
 
     public function _sTrade()
@@ -35,7 +36,12 @@ class Flow extends Model
     {
         $flow = null;
         \DB::transaction(function () use (&$flow, $type, $s_trade, $b_trade) {
-            $flow = static::create(['type' => $type]);
+            $flow = static::create([
+                'type' => $type,
+                's_status' => -1,
+                'b_status' => -1,
+                'l_status' => -1,
+            ]);
             if ($s_trade) {
                 $flow->updateSellTrade($s_trade);
             }
@@ -103,9 +109,23 @@ class Flow extends Model
         $this->updateDiffAvg();
     }
 
+    public function updateLossTrade($l_trade)
+    {
+        $this->update([
+            'b_target' => $l_trade->site,
+            'b_order_id' => $l_trade->order_id,
+            'b_type' => $l_trade->type,
+            'b_status' => $l_trade->status,
+            'b_price' => $l_trade->price,
+            'b_avg_price' => $l_trade->avg_price,
+            'b_amount' => $l_trade->amount,
+            'b_deal_amount' => $l_trade->deal_amount,
+        ]);
+    }
+
     public function getStatus()
     {
-        return $this->s_status . $this->b_status;
+        return $this->s_status . $this->b_status . $this->l_status;
     }
 
     public function isBadSingle()
@@ -120,15 +140,12 @@ class Flow extends Model
 
     public function isBadDouble()
     {
-        if ($this->s_order_id == 0 && $this->b_order_id == 0) {
-            return true;
-        }
-        return false;
+        return $this->s_order_id == 0 && $this->b_order_id == 0;
     }
 
     public function isDone()
     {
-        return $this->getStatus() == '22';
+        return $this->s_status == 2 && $this->b_status == 2;
     }
 
     public function isTradeSingle()
@@ -143,10 +160,7 @@ class Flow extends Model
 
     public function isOrder()
     {
-        if ($this->isOrderSingle() || $this->isOrderDouble()) {
-            return true;
-        }
-        return false;
+        return $this->isOrderSingle() || $this->isOrderDouble();
     }
 
     public function isOrderSingle()
@@ -165,5 +179,10 @@ class Flow extends Model
             return true;
         }
         return false;
+    }
+
+    public function isLossDone()
+    {
+        return $this->l_status == 2;
     }
 }

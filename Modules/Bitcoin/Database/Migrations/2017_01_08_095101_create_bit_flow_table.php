@@ -39,6 +39,15 @@ class CreateBitFlowTable extends Migration
             $table->decimal('b_amount', 10, 4);
             $table->decimal('b_deal_amount', 10, 4);
 
+            $table->string('l_target');//ok or huo
+            $table->bigInteger('l_order_id');
+            $table->string('l_type');
+            $table->integer('l_status');
+            $table->decimal('l_price', 10, 4);
+            $table->decimal('l_avg_price', 10, 4);
+            $table->decimal('l_amount', 10, 4);
+            $table->decimal('l_deal_amount', 10, 4);
+
             $table->timestamps();
         });
     }

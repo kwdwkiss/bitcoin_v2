@@ -153,26 +153,62 @@ class BitService
         $this->flowOrderInfo($flow);
     }
 
+    public function flowLoss(Flow $flow)
+    {
+        $factor = 5;
+        $depth = $this->getDepth();
+        if ($flow->s_status == 2 && $flow->b_status != 2) {
+            if ($depth->okBid < $depth->huoBid) {
+                $this->buyCheck('ok', $depth->okBid + $factor, $flow->s_deal_amount);
+                $trade = app('okService')->buy($depth->okBid + $factor, $flow->s_deal_amount);
+            } else {
+                $this->buyCheck('huo', $depth->huoBid + $factor, $flow->s_deal_amount);
+                $trade = app('huoService')->buy($depth->huoBid + $factor, $flow->s_deal_amount);
+            }
+        } elseif ($flow->s_status != 2 && $flow->b_status == 2) {
+            if ($depth->okAsk < $depth->huoAsk) {
+                $this->buyCheck('ok', $depth->okAsk - $factor, $flow->b_deal_amount);
+                $trade = app('okService')->sell($depth->okAsk - $factor, $flow->b_deal_amount);
+            } else {
+                $this->buyCheck('huo', $depth->huoAsk - $factor, $flow->b_deal_amount);
+                $trade = app('huoService')->sell($depth->huoAsk - $factor, $flow->b_deal_amount);
+            }
+        } else {
+            myLog('flowLoss.error', $flow->toArray());
+            throw new \Exception('flowLoss.error');
+        }
+        $flow->updateLossTrade($trade);
+    }
+
     public function flowOrderInfo(Flow $flow)
     {
         $status = $flow->getStatus();
         $s_trade = $flow->_sTrade;
         $b_trade = $flow->_bTrade;
-        if ($s_trade && $flow->s_target == 'ok') {
+        $l_trade = $flow->_lTrade;
+        if ($s_trade && $flow->s_order_id && $flow->s_target == 'ok') {
             app('okService')->orderInfo($s_trade);
-        } elseif ($s_trade && $flow->s_target == 'huo') {
+        } elseif ($s_trade && $flow->s_order_id && $flow->s_target == 'huo') {
             app('huoService')->orderInfo($s_trade);
         }
-        if ($b_trade && $flow->b_target == 'ok') {
+        if ($b_trade && $flow->b_order_id && $flow->b_target == 'ok') {
             app('okService')->orderInfo($b_trade);
         } elseif ($b_trade && $flow->b_target == 'huo') {
             app('huoService')->orderInfo($b_trade);
+        }
+        if ($l_trade && $flow->l_order_id && $flow->l_target == 'ok') {
+            app('okService')->orderInfo($l_trade);
+        } elseif ($l_trade && $flow->l_target == 'huo') {
+            app('huoService')->orderInfo($l_trade);
         }
         if ($s_trade) {
             $flow->updateSellTrade($s_trade);
         }
         if ($b_trade) {
             $flow->updateBuyTrade($b_trade);
+        }
+        if ($l_trade) {
+            $flow->updateBuyTrade($l_trade);
         }
         if ($status != $flow->getStatus()) {
             $this->syncAccount();
@@ -183,42 +219,97 @@ class BitService
     public function flowTask()
     {
         $task = Config::get('bit.flow.task');
+        if (!$task) {
+            return;
+        }
         $flow = Flow::find($task['flowId']);
         $try = 0;
-        switch ($task['tag']) {
+        $tryLimit = 10;
+        $sleep = 1;
+        switch ($task['name']) {
             case 'flowZero':
                 while (true) {
+                    myLog('flowZero.task.do', ['task' => $task, 'try' => $try, $flow->toArray()]);
                     if ($flow->isDone() || $flow->isBadDouble()) {
                         Config::del('bit.flow.task');
+                        myLog('flowZero.task.finish', ['task' => $task, $flow->toArray()]);
                         return;
                     }
-                    if ($try >= 5) {
-                        $task['tag'] = 'flowCancel';
+                    if ($try >= $tryLimit) {
+                        $task['name'] = 'flowCancel';
                         Config::set('bit.flow.task', $task);
+                        myLog('flowCancel.task.jump', ['task' => $task, $flow->toArray()]);
                         return;
                     }
                     $start = microtime(true);
                     $this->flowOrderInfo($flow);
                     $try++;
-                    sleepTo($start, 1);
+                    sleepTo($start, $sleep);
                 }
                 break;
             case 'flowCancel':
                 while (true) {
+                    myLog('flowCancel.task.do', ['task' => $task, 'try' => $try, $flow->toArray()]);
+                    if ($flow->isDone() || $flow->isBadDouble()) {
+                        Config::del('bit.flow.task');
+                        myLog('flowZero.task.finish', ['task' => $task, $flow->toArray()]);
+                        return;
+                    }
                     if (!$flow->isOrder()) {
                         if ($flow->isTradeSingle()) {
-
+                            $task['name'] = 'flowLoss';
+                            Config::set('bit.flow.task', $task);
+                            myLog('flowLoss.task.jump', ['task' => $task, $flow->toArray()]);
                         } else {
-                            throw new \Exception('');
+                            myLog('flowZero.task.error', ['task' => $task, $flow->toArray()]);
+                            throw new \Exception('flowCancel.error');
                         }
+                    }
+                    if ($try >= $tryLimit) {
+                        myLog('flowCancel.task.error', ['task' => $task, $flow->toArray()]);
+                        throw new \Exception('flowCancel.error');
                     }
                     $start = microtime(true);
                     $this->flowCancel($flow);
                     $try++;
-                    sleepTo($start, 1);
+                    sleepTo($start, $sleep);
                 }
                 break;
-            case 'CancelOrderInfo':
+            case 'flowLoss':
+                while (true) {
+                    if ($flow->isLossOrder()) {
+                        Config::del('bit.flow.task');
+                        myLog('flowLossOrderInfo.task.finish', ['task' => $task, $flow->toArray()]);
+                        return;
+                    }
+                    if ($try >= $tryLimit) {
+                        myLog('flowLoss.task.error', ['task' => $task, $flow->toArray()]);
+                        throw new \Exception('flowLoss.error');
+                    }
+                    $start = microtime(true);
+                    $this->flowLoss($flow);
+                    $try++;
+                    sleepTo($start, $sleep);
+                }
+                break;
+            case 'flowLossCancel':
+                break;
+            case 'flowLossOrderInfo':
+                while (true) {
+                    if ($flow->isLossDone()) {
+                        Config::del('bit.flow.task');
+                        myLog('flowLossOrderInfo.task.finish', ['task' => $task, $flow->toArray()]);
+                    }
+                    if ($try >= $tryLimit) {
+                        $task['name'] = 'flowLossCancel';
+                        Config::set('bit.flow.task', $task);
+                        myLog('flowLossCancel.task.jump', ['task' => $task, $flow->toArray()]);
+                    }
+                    $start = microtime(true);
+                    $this->flowOrderInfo($flow);
+                    $try++;
+                    sleepTo($start, $sleep);
+                }
                 break;
         }
     }
@@ -249,7 +340,7 @@ class BitService
         }
         if ($flow) {
             Config::set('bit.flow.task', [
-                'tag' => 'flowZero',
+                'name' => 'flowZero',
                 'flowId' => $flow->id,
             ]);
         }
@@ -278,6 +369,34 @@ class BitService
         if ($okAccount->free_cny < $okPrice * $amount) {
             myLog('flowHuoToOkCheck.ok.cny.not.enough', compact('huoPrice', 'okPrice', 'amount'));
             throw new \Exception('flowHuoToOkCheck.ok.cny.not.enough');
+        }
+    }
+
+    public function buyCheck($site, $price, $amount)
+    {
+        list($okAccount, $huoAccount) = $this->getAccount();
+        if ($site == 'ok') {
+            if ($okAccount->free_cny < $price * $amount) {
+                myLog('buyCheck.ok.cny.not.enough', compact('site', 'price', 'amount'));
+            }
+        } else {
+            if ($huoAccount->free_cny < $price * $amount) {
+                myLog('buyCheck.huo.cny.not.enough', compact('site', 'price', 'amount'));
+            }
+        }
+    }
+
+    public function sellCheck($site, $amount)
+    {
+        list($okAccount, $huoAccount) = $this->getAccount();
+        if ($site == 'ok') {
+            if ($okAccount->free_btc < $amount) {
+                myLog('sellCheck.ok.cny.not.enough', compact('site', 'price', 'amount'));
+            }
+        } else {
+            if ($huoAccount->free_btc < $amount) {
+                myLog('sellCheck.huo.cny.not.enough', compact('site', 'price', 'amount'));
+            }
         }
     }
 }
