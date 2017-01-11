@@ -316,6 +316,11 @@ class BitService
 
     public function flowZero($amount = 0.01)
     {
+        $task = Config::get('bit.flow.task');
+        if ($task) {
+            return;
+        }
+
         $depth = $this->getDepth();
         $okAsk = $depth->okAsk;
         $okBid = $depth->okBid;
