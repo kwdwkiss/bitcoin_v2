@@ -336,7 +336,7 @@ class BitService
             $huoPrice = sprintf("%.2f", $huoBid - $factor);
             $okPrice = sprintf("%.2f", $okAsk + $factor);
             myLog('huoToOk', compact('huoDiff', 'factor', 'huoBid', 'okAsk', 'huoPrice', 'okPrice'));
-            $flow = $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoPrice);
+            $flow = $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoDiff);
         }
         if ($flow) {
             Config::set('bit.flow.task', [
