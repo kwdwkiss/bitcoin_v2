@@ -343,6 +343,7 @@ class BitService
                 'name' => 'flowZero',
                 'flowId' => $flow->id,
             ]);
+            $this->flowTask();
         }
     }
 

@@ -20,7 +20,6 @@ class FlowZero extends Command
     public function fire()
     {
         $amount = $this->argument('amount');
-        $flow = app('bitService')->flowZero($amount);
-        $flow && app('bitService')->flowOrderInfo($flow);
+        app('bitService')->flowZero($amount);
     }
 }
