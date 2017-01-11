@@ -344,7 +344,7 @@ class BitService
             $flow = $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoDiff);
         }
         if ($flow) {
-            myLog('flowLoss.task.jump', [$flow->toArray()]);
+            myLog('flowZero.task.start', [$flow->toArray()]);
             Config::set('bit.flow.task', [
                 'name' => 'orderInfo',
                 'flowId' => $flow->id,
