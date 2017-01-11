@@ -227,12 +227,12 @@ class BitService
         $tryLimit = 10;
         $sleep = 1;
         switch ($task['name']) {
-            case 'flowZero':
+            case 'orderInfo':
                 while (true) {
-                    myLog('flowZero.task.do', ['task' => $task, 'try' => $try, $flow->toArray()]);
+                    myLog('orderInfo.task.do', ['task' => $task, 'try' => $try, $flow->toArray()]);
                     if ($flow->isDone() || $flow->isBadDouble()) {
                         Config::del('bit.flow.task');
-                        myLog('flowZero.task.finish', ['task' => $task, $flow->toArray()]);
+                        myLog('orderInfo.task.finish', ['task' => $task, $flow->toArray()]);
                         return;
                     }
                     if ($try >= $tryLimit) {
@@ -344,8 +344,9 @@ class BitService
             $flow = $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoDiff);
         }
         if ($flow) {
+            myLog('flowLoss.task.jump', [$flow->toArray()]);
             Config::set('bit.flow.task', [
-                'name' => 'flowZero',
+                'name' => 'orderInfo',
                 'flowId' => $flow->id,
             ]);
             $this->flowTask();
