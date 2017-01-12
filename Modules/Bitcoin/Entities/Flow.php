@@ -32,6 +32,15 @@ class Flow extends Model
         }
     }
 
+    public function _lTrade()
+    {
+        if ($this->l_target == 'huo') {
+            return $this->belongsTo(Trade::class, 'l_order_id', 'order_id')->where('site', 'huo');
+        } else {
+            return $this->belongsTo(Trade::class, 'l_order_id', 'order_id')->where('site', 'ok');
+        }
+    }
+
     public static function createForTrade($type, $s_trade, $b_trade)
     {
         $flow = null;
@@ -179,6 +188,11 @@ class Flow extends Model
             return true;
         }
         return false;
+    }
+
+    public function isLossOrder()
+    {
+        return $this->l_order_id && $this->l_status == 0;
     }
 
     public function isLossDone()

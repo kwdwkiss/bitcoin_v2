@@ -166,11 +166,11 @@ class BitService
                 $trade = app('huoService')->buy($depth->huoBid + $factor, $flow->s_deal_amount);
             }
         } elseif ($flow->s_status != 2 && $flow->b_status == 2) {
-            if ($depth->okAsk < $depth->huoAsk) {
-                $this->buyCheck('ok', $depth->okAsk - $factor, $flow->b_deal_amount);
+            if ($depth->okAsk > $depth->huoAsk) {
+                $this->sellCheck('ok', $depth->okAsk - $factor, $flow->b_deal_amount);
                 $trade = app('okService')->sell($depth->okAsk - $factor, $flow->b_deal_amount);
             } else {
-                $this->buyCheck('huo', $depth->huoAsk - $factor, $flow->b_deal_amount);
+                $this->sellCheck('huo', $depth->huoAsk - $factor, $flow->b_deal_amount);
                 $trade = app('huoService')->sell($depth->huoAsk - $factor, $flow->b_deal_amount);
             }
         } else {
@@ -178,6 +178,19 @@ class BitService
             throw new \Exception('flowLoss.error');
         }
         $flow->updateLossTrade($trade);
+    }
+
+    public function flowLossCancel(Flow $flow)
+    {
+        $this->flowOrderInfo($flow);
+        if ($flow->l_order_id && $flow->l_status == 0) {
+            if ($flow->l_target == 'ok') {
+                app('okService')->cancel($flow->_lTrade);
+            } else {
+                app('huoService')->cancel($flow->_lTrade);
+            }
+        }
+        $this->flowOrderInfo($flow);
     }
 
     public function flowOrderInfo(Flow $flow)
@@ -229,16 +242,16 @@ class BitService
         switch ($task['name']) {
             case 'orderInfo':
                 while (true) {
-                    myLog('orderInfo.task.do', ['task' => $task, 'try' => $try, $flow->toArray()]);
+                    myLog('orderInfo.task.do', compact('task', 'try'));
                     if ($flow->isDone() || $flow->isBadDouble()) {
                         Config::del('bit.flow.task');
-                        myLog('orderInfo.task.finish', ['task' => $task, $flow->toArray()]);
+                        myLog('orderInfo.task.finish');
                         return;
                     }
                     if ($try >= $tryLimit) {
                         $task['name'] = 'flowCancel';
                         Config::set('bit.flow.task', $task);
-                        myLog('flowCancel.task.jump', ['task' => $task, $flow->toArray()]);
+                        myLog('flowCancel.task.jump');
                         return;
                     }
                     $start = microtime(true);
@@ -249,25 +262,26 @@ class BitService
                 break;
             case 'flowCancel':
                 while (true) {
-                    myLog('flowCancel.task.do', ['task' => $task, 'try' => $try, $flow->toArray()]);
+                    myLog('flowCancel.task.do', compact('task', 'try'));
                     if ($flow->isDone() || $flow->isBadDouble()) {
                         Config::del('bit.flow.task');
-                        myLog('flowZero.task.finish', ['task' => $task, $flow->toArray()]);
+                        myLog('flowZero.task.finish');
                         return;
                     }
                     if (!$flow->isOrder()) {
                         if ($flow->isTradeSingle()) {
                             $task['name'] = 'flowLoss';
                             Config::set('bit.flow.task', $task);
-                            myLog('flowLoss.task.jump', ['task' => $task, $flow->toArray()]);
+                            myLog('flowLoss.task.jump');
+                            return;
                         } else {
-                            myLog('flowZero.task.error', ['task' => $task, $flow->toArray()]);
-                            throw new \Exception('flowCancel.error');
+                            myLog('flowCancel.task.error', $flow->toArray());
+                            throw new \Exception('flowCancel.task.error');
                         }
                     }
                     if ($try >= $tryLimit) {
-                        myLog('flowCancel.task.error', ['task' => $task, $flow->toArray()]);
-                        throw new \Exception('flowCancel.error');
+                        myLog('flowCancel.task.try.limit');
+                        throw new \Exception('flowCancel.task.try.limit');
                     }
                     $start = microtime(true);
                     $this->flowCancel($flow);
@@ -276,15 +290,16 @@ class BitService
                 }
                 break;
             case 'flowLoss':
+                myLog('flowLoss.task.do', compact('task', 'try'));
                 while (true) {
                     if ($flow->isLossOrder()) {
                         Config::del('bit.flow.task');
-                        myLog('flowLossOrderInfo.task.finish', ['task' => $task, $flow->toArray()]);
+                        myLog('flowLossOrderInfo.task.finish');
                         return;
                     }
                     if ($try >= $tryLimit) {
-                        myLog('flowLoss.task.error', ['task' => $task, $flow->toArray()]);
-                        throw new \Exception('flowLoss.error');
+                        myLog('flowLoss.task.try.limit');
+                        throw new \Exception('flowLoss.task.try.limit');
                     }
                     $start = microtime(true);
                     $this->flowLoss($flow);
@@ -292,21 +307,35 @@ class BitService
                     sleepTo($start, $sleep);
                 }
                 break;
-            case 'flowLossCancel':
-                break;
             case 'flowLossOrderInfo':
+                myLog('flowLossOrderInfo.task.do', compact('task', 'try'));
                 while (true) {
                     if ($flow->isLossDone()) {
                         Config::del('bit.flow.task');
-                        myLog('flowLossOrderInfo.task.finish', ['task' => $task, $flow->toArray()]);
+                        myLog('flowLossOrderInfo.task.finish');
+                        return;
                     }
                     if ($try >= $tryLimit) {
                         $task['name'] = 'flowLossCancel';
                         Config::set('bit.flow.task', $task);
-                        myLog('flowLossCancel.task.jump', ['task' => $task, $flow->toArray()]);
+                        myLog('flowLossCancel.task.jump');
+                        return;
                     }
                     $start = microtime(true);
                     $this->flowOrderInfo($flow);
+                    $try++;
+                    sleepTo($start, $sleep);
+                }
+                break;
+            case 'flowLossCancel':
+                myLog('flowLossCancel.task.do', compact('task', 'try'));
+                while (true) {
+                    if ($try >= $tryLimit) {
+                        myLog('flowLossCancel.task.try.limit');
+                        throw new \Exception('flowLossCancel.task.try.limit');
+                    }
+                    $start = microtime(true);
+                    $this->flowLossCancel($flow);
                     $try++;
                     sleepTo($start, $sleep);
                 }
