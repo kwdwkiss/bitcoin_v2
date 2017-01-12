@@ -21,19 +21,19 @@ class FlowCheckTest extends Command
         print_r([$okAccount->toArray(), $huoAccount->toArray()]);
         print_r("\n");
         try {
-            app('bitService')->flowHuoToOkCheck(5000, 5000000, 0.01);
+            app('bitService')->flowHuoToOkCheck(5000000, 0.01);
         } catch (\Exception $e) {
         }
         try {
-            app('bitService')->flowHuoToOkCheck(5000, 5000, 10);
+            app('bitService')->flowHuoToOkCheck(5000, 10);
         } catch (\Exception $e) {
         }
         try {
-            app('bitService')->flowOkToHuoCheck(5000, 5000000, 0.01);
+            app('bitService')->flowOkToHuoCheck(5000000, 0.01);
         } catch (\Exception $e) {
         }
         try {
-            app('bitService')->flowOkToHuoCheck(5000, 5000, 10);
+            app('bitService')->flowOkToHuoCheck(5000, 10);
         } catch (\Exception $e) {
         }
     }

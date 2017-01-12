@@ -109,7 +109,7 @@ class BitService
 
     public function flowOkToHuo($okPrice, $huoPrice, $amount, $async = true)
     {
-        $this->flowOkToHuoCheck($okPrice, $huoPrice, $amount);
+        $this->flowOkToHuoCheck($huoPrice, $amount);
         if ($async) {
             list($okTrade, $huoTrade) = $this->multi(app('okService')->sell($okPrice, $amount, true),
                 app('huoService')->buy($huoPrice, $amount, true));
@@ -122,7 +122,7 @@ class BitService
 
     public function flowHuoToOk($huoPrice, $okPrice, $amount, $async = true)
     {
-        $this->flowHuoToOkCheck($huoPrice, $okPrice, $amount);
+        $this->flowHuoToOkCheck($okPrice, $amount);
         if ($async) {
             list($okTrade, $huoTrade) = $this->multi(app('okService')->buy($okPrice, $amount, true),
                 app('huoService')->sell($huoPrice, $amount, true));
@@ -353,30 +353,16 @@ class BitService
         }
     }
 
-    public function flowOkToHuoCheck($okPrice, $huoPrice, $amount)
+    public function flowOkToHuoCheck($huoPrice, $amount)
     {
-        list($okAccount, $huoAccount) = $this->getAccount();
-        if ($okAccount->free_btc < $amount) {
-            myLog('flowOkToHuoCheck.ok.btc.not.enough', compact('okPrice', 'huoPrice', 'amount'));
-            throw new \Exception('flowOkToHuoCheck.ok.btc.not.enough');
-        }
-        if ($huoAccount->free_cny < $huoPrice * $amount) {
-            myLog('flowOkToHuoCheck.huo.cny.not.enough', compact('okPrice', 'huoPrice', 'amount'));
-            throw new \Exception('flowOkToHuoCheck.huo.cny.not.enough');
-        }
+        $this->sellCheck('ok', $amount);
+        $this->buyCheck('huo', $huoPrice, $amount);
     }
 
-    public function flowHuoToOkCheck($huoPrice, $okPrice, $amount)
+    public function flowHuoToOkCheck($okPrice, $amount)
     {
-        list($okAccount, $huoAccount) = $this->getAccount();
-        if ($huoAccount->free_btc < $amount) {
-            myLog('flowHuoToOkCheck.huo.btc.not.enough', compact('huoPrice', 'okPrice', 'amount'));
-            throw new \Exception('flowHuoToOkCheck.huo.btc.not.enough');
-        }
-        if ($okAccount->free_cny < $okPrice * $amount) {
-            myLog('flowHuoToOkCheck.ok.cny.not.enough', compact('huoPrice', 'okPrice', 'amount'));
-            throw new \Exception('flowHuoToOkCheck.ok.cny.not.enough');
-        }
+        $this->sellCheck('huo', $amount);
+        $this->buyCheck('ok', $okPrice, $amount);
     }
 
     public function buyCheck($site, $price, $amount)
