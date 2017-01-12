@@ -371,10 +371,12 @@ class BitService
         if ($site == 'ok') {
             if ($okAccount->free_cny < $price * $amount) {
                 myLog('buyCheck.ok.cny.not.enough', compact('site', 'price', 'amount'));
+                throw new \Exception('buyCheck.ok.cny.not.enough');
             }
         } else {
             if ($huoAccount->free_cny < $price * $amount) {
                 myLog('buyCheck.huo.cny.not.enough', compact('site', 'price', 'amount'));
+                throw new \Exception('buyCheck.huo.cny.not.enough');
             }
         }
     }
@@ -385,10 +387,12 @@ class BitService
         if ($site == 'ok') {
             if ($okAccount->free_btc < $amount) {
                 myLog('sellCheck.ok.cny.not.enough', compact('site', 'price', 'amount'));
+                throw new \Exception('sellCheck.ok.cny.not.enough');
             }
         } else {
             if ($huoAccount->free_btc < $amount) {
                 myLog('sellCheck.huo.cny.not.enough', compact('site', 'price', 'amount'));
+                throw new \Exception('sellCheck.ok.cny.not.enough');
             }
         }
     }
