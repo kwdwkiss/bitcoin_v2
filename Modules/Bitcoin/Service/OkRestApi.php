@@ -35,7 +35,7 @@ class OkRestApi
 
     protected $restApiUrl = 'https://www.okcoin.cn';
 
-    protected $apiLogEnable = false;
+    public $apiLogEnable = false;
 
     protected $http;
 

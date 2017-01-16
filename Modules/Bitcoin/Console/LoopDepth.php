@@ -19,7 +19,8 @@ class LoopDepth extends Command
     {
         $sleep = $this->option('sleep');
         $length = $this->option('length');
-        config('bit.apiLogEnable', false);
+        app('huoRestApi')->apiLogEnable = false;
+        app('okRestApi')->apiLogEnable = false;
         app('bitService')->loopDepth($sleep, $length);
     }
 }

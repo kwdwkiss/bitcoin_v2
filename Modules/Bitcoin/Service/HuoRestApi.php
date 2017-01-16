@@ -23,7 +23,7 @@ class HuoRestApi
 
     protected $restApiUrl = 'http://api.huobi.com';
 
-    protected $apiLogEnable = false;
+    public $apiLogEnable = false;
 
     protected $http;
 
