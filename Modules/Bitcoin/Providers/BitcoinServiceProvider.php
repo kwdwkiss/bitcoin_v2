@@ -38,11 +38,12 @@ class BitcoinServiceProvider extends ServiceProvider
     {
         $this->registerCommand();
         $this->registerService();
-        $this->app->singleton('huoRestApi', function () {
-            return new HuoRestApi(env('HUOBI_API_KEY'), env('HUOBI_SECRET_KEY'), app('guzzle'), true);
+        $apiLogEnable = config('bit.apiLogEnable', true);
+        $this->app->singleton('huoRestApi', function () use ($apiLogEnable) {
+            return new HuoRestApi(env('HUOBI_API_KEY'), env('HUOBI_SECRET_KEY'), app('guzzle'), $apiLogEnable);
         });
-        $this->app->singleton('okRestApi', function () {
-            return new OkRestApi(env('OKCOIN_API_KEY'), env('OKCOIN_SECRET_KEY'), app('guzzle'), true);
+        $this->app->singleton('okRestApi', function () use ($apiLogEnable) {
+            return new OkRestApi(env('OKCOIN_API_KEY'), env('OKCOIN_SECRET_KEY'), app('guzzle'), $apiLogEnable);
         });
     }
 
