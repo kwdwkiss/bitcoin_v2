@@ -142,6 +142,7 @@ class BitService
             } else {
                 app('huoService')->cancel($flow->_sTrade);
             }
+            $flow->updateSellTrade($flow->_sTrade);
         }
         if ($flow->b_order_id && $flow->b_status == 0) {
             if ($flow->b_target == 'ok') {
@@ -149,8 +150,8 @@ class BitService
             } else {
                 app('huoService')->cancel($flow->_bTrade);
             }
+            $flow->updateBuyTrade($flow->_bTrade);
         }
-        $this->flowOrderInfo($flow);
     }
 
     public function flowLoss(Flow $flow)
@@ -167,10 +168,10 @@ class BitService
             }
         } elseif ($flow->s_status != 2 && $flow->b_status == 2) {
             if ($depth->okAsk > $depth->huoAsk) {
-                $this->sellCheck('ok', $depth->okAsk - $factor, $flow->b_deal_amount);
+                $this->sellCheck('ok', $flow->b_deal_amount);
                 $trade = app('okService')->sell($depth->okAsk - $factor, $flow->b_deal_amount);
             } else {
-                $this->sellCheck('huo', $depth->huoAsk - $factor, $flow->b_deal_amount);
+                $this->sellCheck('huo', $flow->b_deal_amount);
                 $trade = app('huoService')->sell($depth->huoAsk - $factor, $flow->b_deal_amount);
             }
         } else {
@@ -290,13 +291,12 @@ class BitService
                 }
                 break;
             case 'flowLoss':
-                break;
                 myLog('flowLoss.task.do', compact('task', 'try'));
                 while (true) {
-                    $this->flowOrderInfo($flow);
                     if ($flow->isLossOrder()) {
-                        Config::del('bit.flow.task');
-                        myLog('flowLossOrderInfo.task.finish');
+                        $task['name'] = 'flowLossOrderInfo';
+                        Config::set('bit.flow.task', $task);
+                        myLog('flowLossOrderInfo.task.jump');
                         return;
                     }
                     if ($try >= $tryLimit) {
@@ -330,6 +330,7 @@ class BitService
                 }
                 break;
             case 'flowLossCancel':
+                break;
                 myLog('flowLossCancel.task.do', compact('task', 'try'));
                 while (true) {
                     if ($try >= $tryLimit) {
