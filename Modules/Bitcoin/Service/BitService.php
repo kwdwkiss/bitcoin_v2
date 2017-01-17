@@ -343,7 +343,7 @@ class BitService
         }
     }
 
-    public function flowZero($amount = 0.01)
+    public function flowZero($price = 0, $amount = 0.01)
     {
         $task = Config::get('bit.flow.task');
         if ($task) {
@@ -359,13 +359,13 @@ class BitService
         $huoDiff = $depth->huoDiff;
         myLog('flowZero', compact('okAsk', 'okBid', 'huoAsk', 'huoBid', 'okDiff', 'huoDiff'));
         $flow = null;
-        if ($okDiff > 0) {
+        if ($okDiff > $price) {
             $factor = $okDiff / 2;
             $okPrice = sprintf("%.2f", $okBid - $factor);
             $huoPrice = sprintf("%.2f", $huoAsk + $factor);
             myLog('okTohuo', compact('okDiff', 'factor', 'okBid', 'huoAsk', 'okPrice', 'huoPrice'));
             $flow = $this->flowOkToHuo($okPrice, $huoPrice, $amount)->updateDiff($okBid, $huoAsk, $okDiff);
-        } elseif ($huoDiff > 0) {
+        } elseif ($huoDiff > $price) {
             $factor = $huoDiff / 2;
             $huoPrice = sprintf("%.2f", $huoBid - $factor);
             $okPrice = sprintf("%.2f", $okAsk + $factor);
