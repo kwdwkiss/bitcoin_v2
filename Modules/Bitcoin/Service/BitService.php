@@ -290,8 +290,10 @@ class BitService
                 }
                 break;
             case 'flowLoss':
+                break;
                 myLog('flowLoss.task.do', compact('task', 'try'));
                 while (true) {
+                    $this->flowOrderInfo($flow);
                     if ($flow->isLossOrder()) {
                         Config::del('bit.flow.task');
                         myLog('flowLossOrderInfo.task.finish');

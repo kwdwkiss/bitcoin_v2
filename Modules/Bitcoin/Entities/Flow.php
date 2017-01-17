@@ -121,14 +121,14 @@ class Flow extends Model
     public function updateLossTrade($l_trade)
     {
         $this->update([
-            'b_target' => $l_trade->site,
-            'b_order_id' => $l_trade->order_id,
-            'b_type' => $l_trade->type,
-            'b_status' => $l_trade->status,
-            'b_price' => $l_trade->price,
-            'b_avg_price' => $l_trade->avg_price,
-            'b_amount' => $l_trade->amount,
-            'b_deal_amount' => $l_trade->deal_amount,
+            'l_target' => $l_trade->site,
+            'l_order_id' => $l_trade->order_id,
+            'l_type' => $l_trade->type,
+            'l_status' => $l_trade->status,
+            'l_price' => $l_trade->price,
+            'l_avg_price' => $l_trade->avg_price,
+            'l_amount' => $l_trade->amount,
+            'l_deal_amount' => $l_trade->deal_amount,
         ]);
     }
 
