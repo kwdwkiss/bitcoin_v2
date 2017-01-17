@@ -222,7 +222,7 @@ class BitService
             $flow->updateBuyTrade($b_trade);
         }
         if ($l_trade) {
-            $flow->updateBuyTrade($l_trade);
+            $flow->updateLossTrade($l_trade);
         }
         if ($status != $flow->getStatus()) {
             $this->syncAccount();
