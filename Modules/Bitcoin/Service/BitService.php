@@ -347,6 +347,7 @@ class BitService
     {
         $task = Config::get('bit.flow.task');
         if ($task) {
+            $this->flowTask();
             return;
         }
 
