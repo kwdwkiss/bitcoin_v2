@@ -19,8 +19,8 @@ class FlowZero extends Command
 
     public function fire()
     {
-        $price = $this->argument('price');
-        $amount = $this->argument('amount');
+        $price = $this->option('price');
+        $amount = $this->option('amount');
         app('bitService')->flowZero($price, $amount);
     }
 }
