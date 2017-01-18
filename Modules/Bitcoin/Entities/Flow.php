@@ -132,6 +132,20 @@ class Flow extends Model
         ]);
     }
 
+    public function clearLossTrade()
+    {
+        $this->update([
+            'l_target' => '',
+            'l_order_id' => 0,
+            'l_type' => '',
+            'l_status' => -1,
+            'l_price' => 0,
+            'l_avg_price' => 0,
+            'l_amount' => 0,
+            'l_deal_amount' => 0,
+        ]);
+    }
+
     public function getStatus()
     {
         return $this->s_status . $this->b_status . $this->l_status;
@@ -188,6 +202,11 @@ class Flow extends Model
             return true;
         }
         return false;
+    }
+
+    public function isUnLoss()
+    {
+        return $this->l_status == -1;
     }
 
     public function isLossOrder()

@@ -190,8 +190,8 @@ class BitService
             } else {
                 app('huoService')->cancel($flow->_lTrade);
             }
+            $flow->clearLossTrade();
         }
-        $this->flowOrderInfo($flow);
     }
 
     public function flowOrderInfo(Flow $flow)
@@ -330,11 +330,14 @@ class BitService
                 }
                 break;
             case 'flowLossCancel':
-                Config::del('bit.flow.task');
-                myLog('flowLossCancel.task.finish.temp');
-                break;
                 myLog('flowLossCancel.task.do', compact('task', 'try'));
                 while (true) {
+                    if ($flow->isUnLoss()) {
+                        $task['name'] = 'flowLoss';
+                        Config::set('bit.flow.task', $task);
+                        myLog('flowLoss.task.jump');
+                        return;
+                    }
                     if ($try >= $tryLimit) {
                         myLog('flowLossCancel.task.try.limit');
                         throw new \Exception('flowLossCancel.task.try.limit');
