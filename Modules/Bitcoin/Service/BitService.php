@@ -330,6 +330,8 @@ class BitService
                 }
                 break;
             case 'flowLossCancel':
+                Config::del('bit.flow.task');
+                myLog('flowLossCancel.task.finish.temp');
                 break;
                 myLog('flowLossCancel.task.do', compact('task', 'try'));
                 while (true) {

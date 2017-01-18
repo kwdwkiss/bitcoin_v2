@@ -23,7 +23,10 @@ class LoopFlowZero extends Command
         $amount = $this->option('amount');
         while (true) {
             $start = microtime(true);
-            app('bitService')->flowZero($price, $amount);
+            try {
+                app('bitService')->flowZero($price, $amount);
+            } catch (\Exception $e) {
+            }
             sleepTo($start, 0.3, false);
         }
     }
