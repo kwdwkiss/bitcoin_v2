@@ -28,13 +28,14 @@ class LoopFlowZero extends Command
                 $task = Config::get('bit.task');
                 if ($task) {
                     app('bitService')->flowTask();
-                }
-                $flow = app('bitService')->flowZero($price, $amount);
-                if ($flow) {
-                    Config::set('bit.task', [
-                        'name' => 'orderInfo',
-                        'flowId' => $flow->id,
-                    ]);
+                } else {
+                    $flow = app('bitService')->flowZero($price, $amount);
+                    if ($flow) {
+                        Config::set('bit.task', [
+                            'name' => 'orderInfo',
+                            'flowId' => $flow->id,
+                        ]);
+                    }
                 }
             } catch (\Exception $e) {
             }
