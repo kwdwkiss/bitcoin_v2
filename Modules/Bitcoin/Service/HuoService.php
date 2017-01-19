@@ -29,12 +29,12 @@ class HuoService
     {
         if ($async) {
             return app('huoRestApi')->sell($price, $amount, true)->then(function ($data) use ($price, $amount) {
-                $trade = Trade::createHuo($data, $price, $amount, 'buy');
+                $trade = Trade::createHuo($data, $price, $amount, 'sell');
                 return new FulfilledPromise($trade);
             });
         } else {
             $data = app('huoRestApi')->sell($price, $amount);
-            return Trade::createHuo($data, $price, $amount, 'buy');
+            return Trade::createHuo($data, $price, $amount, 'sell');
         }
     }
 

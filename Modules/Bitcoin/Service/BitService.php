@@ -232,26 +232,26 @@ class BitService
 
     public function flowTask()
     {
-        $task = Config::get('bit.flow.task');
+        $task = Config::get('bit.task');
         if (!$task) {
             return;
         }
-        $flow = Flow::find($task['flowId']);
         $try = 0;
         $tryLimit = 10;
         $sleep = 1;
         switch ($task['name']) {
             case 'orderInfo':
+                $flow = Flow::find($task['flowId']);
                 while (true) {
                     myLog('orderInfo.task.do', compact('task', 'try'));
                     if ($flow->isDone() || $flow->isBadDouble()) {
-                        Config::del('bit.flow.task');
+                        Config::del('bit.task');
                         myLog('orderInfo.task.finish');
                         return;
                     }
                     if ($try >= $tryLimit) {
                         $task['name'] = 'flowCancel';
-                        Config::set('bit.flow.task', $task);
+                        Config::set('bit.task', $task);
                         myLog('flowCancel.task.jump');
                         return;
                     }
@@ -262,17 +262,18 @@ class BitService
                 }
                 break;
             case 'flowCancel':
+                $flow = Flow::find($task['flowId']);
                 while (true) {
                     myLog('flowCancel.task.do', compact('task', 'try'));
                     if ($flow->isDone() || $flow->isBadDouble()) {
-                        Config::del('bit.flow.task');
+                        Config::del('bit.task');
                         myLog('flowZero.task.finish');
                         return;
                     }
                     if (!$flow->isOrder()) {
                         if ($flow->isTradeSingle()) {
                             $task['name'] = 'flowLoss';
-                            Config::set('bit.flow.task', $task);
+                            Config::set('bit.task', $task);
                             myLog('flowLoss.task.jump');
                             return;
                         } else {
@@ -291,11 +292,12 @@ class BitService
                 }
                 break;
             case 'flowLoss':
+                $flow = Flow::find($task['flowId']);
                 myLog('flowLoss.task.do', compact('task', 'try'));
                 while (true) {
                     if ($flow->isLossOrder()) {
                         $task['name'] = 'flowLossOrderInfo';
-                        Config::set('bit.flow.task', $task);
+                        Config::set('bit.task', $task);
                         myLog('flowLossOrderInfo.task.jump');
                         return;
                     }
@@ -310,16 +312,17 @@ class BitService
                 }
                 break;
             case 'flowLossOrderInfo':
+                $flow = Flow::find($task['flowId']);
                 myLog('flowLossOrderInfo.task.do', compact('task', 'try'));
                 while (true) {
                     if ($flow->isLossDone()) {
-                        Config::del('bit.flow.task');
+                        Config::del('bit.task');
                         myLog('flowLossOrderInfo.task.finish');
                         return;
                     }
                     if ($try >= $tryLimit) {
                         $task['name'] = 'flowLossCancel';
-                        Config::set('bit.flow.task', $task);
+                        Config::set('bit.task', $task);
                         myLog('flowLossCancel.task.jump');
                         return;
                     }
@@ -330,11 +333,12 @@ class BitService
                 }
                 break;
             case 'flowLossCancel':
+                $flow = Flow::find($task['flowId']);
                 myLog('flowLossCancel.task.do', compact('task', 'try'));
                 while (true) {
                     if ($flow->isUnLoss()) {
                         $task['name'] = 'flowLoss';
-                        Config::set('bit.flow.task', $task);
+                        Config::set('bit.task', $task);
                         myLog('flowLoss.task.jump');
                         return;
                     }
@@ -353,12 +357,6 @@ class BitService
 
     public function flowZero($price = 0, $amount = 0.01)
     {
-        $task = Config::get('bit.flow.task');
-        if ($task) {
-            $this->flowTask();
-            return;
-        }
-
         $depth = $this->getDepth();
         $okAsk = $depth->okAsk;
         $okBid = $depth->okBid;
@@ -381,13 +379,116 @@ class BitService
             myLog('huoToOk', compact('huoDiff', 'factor', 'huoBid', 'okAsk', 'huoPrice', 'okPrice'));
             $flow = $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoDiff);
         }
-        if ($flow) {
-            myLog('flowZero.task.start', [$flow->toArray()]);
-            Config::set('bit.flow.task', [
-                'name' => 'orderInfo',
-                'flowId' => $flow->id,
-            ]);
-            $this->flowTask();
+        return $flow;
+    }
+
+    public function flowOkToHuoDepth($depth, $amount)
+    {
+        $okDiff = $depth->okDiff;
+        if ($okDiff) {
+            throw new \Exception('diff,lt.zero');
+        }
+        $okBid = $depth->okBid;
+        $huoAsk = $depth->huoAsk;
+        $factor = $okDiff / 2;
+        $okPrice = sprintf("%.2f", $okBid - $factor);
+        $huoPrice = sprintf("%.2f", $huoAsk + $factor);
+        return $this->flowOkToHuo($okPrice, $huoPrice, $amount)->updateDiff($okBid, $huoAsk, $okDiff);
+    }
+
+    public function flowHuoToOkDepth($depth, $amount)
+    {
+        $huoDiff = $depth->huoDiff;
+        if ($huoDiff) {
+            throw new \Exception('diff,lt.zero');
+        }
+        $huoBid = $depth->huoBid;
+        $okAsk = $depth->okAsk;
+        $factor = $huoDiff / 2;
+        $huoPrice = sprintf("%.2f", $huoBid - $factor);
+        $okPrice = sprintf("%.2f", $okAsk + $factor);
+        myLog('huoToOk', compact('huoDiff', 'factor', 'huoBid', 'okAsk', 'huoPrice', 'okPrice'));
+        return $this->flowHuoToOk($huoPrice, $okPrice, $amount)->updateDiff($huoBid, $okAsk, $huoDiff);
+    }
+
+    public function flowLine($region = 1, $amount = 0.01)
+    {
+        $depth = $this->getDepth();
+        $okAsk = $depth->okAsk;
+        $okBid = $depth->okBid;
+        $huoAsk = $depth->huoAsk;
+        $huoBid = $depth->huoBid;
+        $okDiff = $depth->okDiff;
+        $huoDiff = $depth->huoDiff;
+        myLog('flowLine', compact('okAsk', 'okBid', 'huoAsk', 'huoBid', 'okDiff', 'huoDiff'));
+        $flow = null;
+        $okLine = Config::get('bit.ok.line');
+        $huoLine = Config::get('bit.huo.line');
+        if (!$okLine) {
+            if ($okDiff > $region) {
+                $flow = $this->flowOkToHuoDepth($depth, $amount);
+                $line = [
+                    'target' => 'ok',
+                    'type' => '+',
+                ];
+            } elseif ($huoDiff > $region) {
+                $flow = $this->flowHuoToOkDepth($depth, $amount);
+                $line = [
+                    'target' => 'ok',
+                    'type' => '-',
+                ];
+            } else {
+                return [];
+            }
+            if ($flow) {
+                $task = [
+                    'type' => 'line',
+                    'step' => 'flow',
+                    'next' => 'orderInfo',
+                    'line' => $line,
+                    'flowId' => $flow->id,
+                ];
+                return $task;
+            }
+        }
+        if (!$huoLine) {
+            if ($huoDiff > $region) {
+                $flow = $this->flowHuoToOkDepth($depth, $amount);
+                $line = [
+                    'target' => 'huo',
+                    'type' => '+',
+                ];
+            } elseif ($okDiff > $region) {
+                $flow = $this->flowOkToHuoDepth($depth, $amount);
+                $line = [
+                    'target' => 'huo',
+                    'type' => '-',
+                ];
+            } else {
+                return [];
+            }
+            if ($flow) {
+                $task = [
+                    'type' => 'line',
+                    'step' => 'flow',
+                    'next' => 'orderInfo',
+                    'line' => $line,
+                    'flowId' => $flow->id,
+                ];
+                return $task;
+            }
+        }
+        if ($okLine) {
+            $type = $okLine['type'];
+            $avgDiff = $okLine['avgDiff'];
+            if ($type == '+' && $okDiff - $avgDiff > $region) {
+
+            } elseif ($type == '-' && $okDiff - $avgDiff > $region) {
+
+            }
+        }
+        if ($huoLine) {
+            $avgDiff = $huoLine['avgDiff'];
         }
     }
 

@@ -38,7 +38,7 @@ class BitcoinServiceProvider extends ServiceProvider
     {
         $this->registerCommand();
         $this->registerService();
-        $apiLogEnable = config('bit.apiLogEnable', true);
+        $apiLogEnable = config('bit.apiLogEnable', false);
         $this->app->singleton('huoRestApi', function () use ($apiLogEnable) {
             return new HuoRestApi(env('HUOBI_API_KEY'), env('HUOBI_SECRET_KEY'), app('guzzle'), $apiLogEnable);
         });

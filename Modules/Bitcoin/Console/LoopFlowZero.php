@@ -5,6 +5,7 @@ namespace Modules\Bitcoin\Console;
 use Illuminate\Console\Command;
 use Modules\Bitcoin\Entities\Flow;
 use Modules\Bitcoin\Entities\Trade;
+use Modules\Core\Entities\Config;
 
 class LoopFlowZero extends Command
 {
@@ -24,7 +25,17 @@ class LoopFlowZero extends Command
         while (true) {
             $start = microtime(true);
             try {
-                app('bitService')->flowZero($price, $amount);
+                $task = Config::get('bit.task');
+                if ($task) {
+                    app('bitService')->flowTask();
+                }
+                $flow = app('bitService')->flowZero($price, $amount);
+                if ($flow) {
+                    Config::set('bit.task', [
+                        'name' => 'orderInfo',
+                        'flowId' => $flow->id,
+                    ]);
+                }
             } catch (\Exception $e) {
             }
             sleepTo($start, 0.3, false);
