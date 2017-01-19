@@ -143,6 +143,7 @@ class BitService
                 app('huoService')->cancel($flow->_sTrade);
             }
             $flow->updateSellTrade($flow->_sTrade);
+            $this->flowOrderInfo($flow);
         }
         if ($flow->b_order_id && $flow->b_status == 0) {
             if ($flow->b_target == 'ok') {
@@ -151,6 +152,7 @@ class BitService
                 app('huoService')->cancel($flow->_bTrade);
             }
             $flow->updateBuyTrade($flow->_bTrade);
+            $this->flowOrderInfo($flow);
         }
     }
 
