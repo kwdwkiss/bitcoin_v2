@@ -237,7 +237,7 @@ class BitService
             return;
         }
         $try = 0;
-        $tryLimit = 10;
+        $tryLimit = 5;
         $sleep = 1;
         switch ($task['name']) {
             case 'orderInfo':
