@@ -10,6 +10,12 @@ namespace Modules\Bitcoin\Service;
 use Modules\Bitcoin\Entities\Account;
 use Modules\Bitcoin\Entities\Depth;
 use Modules\Bitcoin\Entities\Flow;
+use Modules\Bitcoin\Entities\Trade;
+use Modules\Bitcoin\Exception\HuoBtcException;
+use Modules\Bitcoin\Exception\HuoCnyException;
+use Modules\Bitcoin\Exception\NotEnoughException;
+use Modules\Bitcoin\Exception\OkBtcException;
+use Modules\Bitcoin\Exception\OkCnyException;
 use Modules\Core\Entities\Config;
 
 class BitService
@@ -142,7 +148,6 @@ class BitService
             } else {
                 app('huoService')->cancel($flow->_sTrade);
             }
-            $flow->updateSellTrade($flow->_sTrade);
             $this->flowOrderInfo($flow);
         }
         if ($flow->b_order_id && $flow->b_status == 0) {
@@ -151,7 +156,6 @@ class BitService
             } else {
                 app('huoService')->cancel($flow->_bTrade);
             }
-            $flow->updateBuyTrade($flow->_bTrade);
             $this->flowOrderInfo($flow);
         }
     }
@@ -387,7 +391,7 @@ class BitService
     public function flowOkToHuoDepth($depth, $amount)
     {
         $okDiff = $depth->okDiff;
-        if ($okDiff) {
+        if ($okDiff < 0) {
             throw new \Exception('diff,lt.zero');
         }
         $okBid = $depth->okBid;
@@ -401,7 +405,7 @@ class BitService
     public function flowHuoToOkDepth($depth, $amount)
     {
         $huoDiff = $depth->huoDiff;
-        if ($huoDiff) {
+        if ($huoDiff < 0) {
             throw new \Exception('diff,lt.zero');
         }
         $huoBid = $depth->huoBid;
@@ -429,68 +433,329 @@ class BitService
         if (!$okLine) {
             if ($okDiff > $region) {
                 $flow = $this->flowOkToHuoDepth($depth, $amount);
-                $line = [
-                    'target' => 'ok',
-                    'type' => '+',
-                ];
+                if ($flow) {
+                    $task = [
+                        'type' => 'line',
+                        'target' => 'ok',
+                        'step' => 'flow',
+                        'next' => 'orderInfo',
+                        'lineType' => '+',
+                        'flowId' => $flow->id,
+                    ];
+                    return $task;
+                }
             } elseif ($huoDiff > $region) {
                 $flow = $this->flowHuoToOkDepth($depth, $amount);
-                $line = [
-                    'target' => 'ok',
-                    'type' => '-',
-                ];
-            } else {
-                return [];
-            }
-            if ($flow) {
-                $task = [
-                    'type' => 'line',
-                    'step' => 'flow',
-                    'next' => 'orderInfo',
-                    'line' => $line,
-                    'flowId' => $flow->id,
-                ];
-                return $task;
+                if ($flow) {
+                    $task = [
+                        'type' => 'line',
+                        'target' => 'ok',
+                        'step' => 'flow',
+                        'next' => 'orderInfo',
+                        'lineType' => '-',
+                        'flowId' => $flow->id,
+                    ];
+                    return $task;
+                }
             }
         }
         if (!$huoLine) {
             if ($huoDiff > $region) {
                 $flow = $this->flowHuoToOkDepth($depth, $amount);
-                $line = [
-                    'target' => 'huo',
-                    'type' => '+',
-                ];
+                if ($flow) {
+                    $task = [
+                        'type' => 'line',
+                        'target' => 'huo',
+                        'step' => 'flow',
+                        'next' => 'orderInfo',
+                        'lineType' => '+',
+                        'flowId' => $flow->id,
+                    ];
+                    return $task;
+                }
             } elseif ($okDiff > $region) {
                 $flow = $this->flowOkToHuoDepth($depth, $amount);
-                $line = [
-                    'target' => 'huo',
-                    'type' => '-',
-                ];
-            } else {
-                return [];
-            }
-            if ($flow) {
-                $task = [
-                    'type' => 'line',
-                    'step' => 'flow',
-                    'next' => 'orderInfo',
-                    'line' => $line,
-                    'flowId' => $flow->id,
-                ];
-                return $task;
+                if ($flow) {
+                    $task = [
+                        'type' => 'line',
+                        'target' => 'huo',
+                        'step' => 'flow',
+                        'next' => 'orderInfo',
+                        'lineType' => '-',
+                        'flowId' => $flow->id,
+                    ];
+                    return $task;
+                }
             }
         }
         if ($okLine) {
-            $type = $okLine['type'];
-            $avgDiff = $okLine['avgDiff'];
-            if ($type == '+' && $okDiff - $avgDiff > $region) {
-
-            } elseif ($type == '-' && $okDiff - $avgDiff > $region) {
-
+            $diff_avg = $okLine['diff_avg'];
+            if ($okDiff > $region && $okDiff > $diff_avg) {
+                $flow = $this->flowOkToHuoDepth($depth, $amount);
+                if ($flow) {
+                    $task = [
+                        'type' => 'line+',
+                        'target' => 'ok',
+                        'step' => 'flow',
+                        'next' => 'orderInfo',
+                        'flowId' => $flow->id,
+                    ];
+                    return $task;
+                }
+            } elseif ($huoDiff > $region && -$huoDiff > $diff_avg) {
+                $flow = $this->flowHuoToOkDepth($depth, $amount);
+                if ($flow) {
+                    $task = [
+                        'type' => 'line-',
+                        'target' => 'ok',
+                        'step' => 'flow',
+                        'next' => 'orderInfo',
+                        'flowId' => $flow->id,
+                    ];
+                    return $task;
+                }
             }
         }
         if ($huoLine) {
-            $avgDiff = $huoLine['avgDiff'];
+            $diff_avg = $huoLine['diff_avg'];
+            if ($huoDiff > $region && $huoDiff > $diff_avg) {
+                $flow = $this->flowHuoToOkDepth($depth, $amount);
+                if ($flow) {
+                    $task = [
+                        'type' => 'line+',
+                        'target' => 'huo',
+                        'step' => 'flow',
+                        'next' => 'orderInfo',
+                        'flowId' => $flow->id,
+                    ];
+                    return $task;
+                }
+            } elseif ($okDiff > $region && -$okDiff > $diff_avg) {
+                $flow = $this->flowOkToHuoDepth($depth, $amount);
+                if ($flow) {
+                    $task = [
+                        'type' => 'line-',
+                        'target' => 'huo',
+                        'step' => 'flow',
+                        'next' => 'orderInfo',
+                        'flowId' => $flow->id,
+                    ];
+                    return $task;
+                }
+            }
+        }
+    }
+
+    public function flowLineTask($task)
+    {
+        $step = $task['step'];
+        $next = $task['next'];
+        $tryLimit = array_get($task, 'tryLimit', 5);
+        $sleep = array_get($task, 'sleep', 1);
+        if ($step == 'orderInfo' && $next == 'finish') {
+            $flow = Flow::findOrFail($task['flowId']);
+            if ($flow->isDone()) {
+                $type = $task['type'];
+                $target = $task['target'];
+                if ($target == 'ok') {
+                    if ($type == 'line') {
+                        $flowTotal = bcmul($flow->s_deal_amount, $flow->diff_avg);
+                        $flowTotal = $task['lineType'] == '+' ? $flowTotal : -$flowTotal;
+                        $okLine['diff_total'] = $flowTotal;
+                        $okLine['amount'] = $flow->s_deal_amount;
+                        $okLine['diff_avg'] = bcdiv($okLine['diff_total'], $okLine['amount']);
+                        Config::set('bit.line.ok', $okLine);
+                    } elseif ($type == 'line+') {
+                        $flowTotal = bcmul($flow->s_deal_amount, $flow->diff_avg);
+                        $okLine = Config::get('bit.line.ok');
+                        $okLine['diff_total'] = bcadd($okLine['diff_total'], $flowTotal);
+                        $okLine['amount'] = bcadd($flow->s_deal_amount, $okLine['amount']);
+                        $okLine['diff_avg'] = bcdiv($okLine['diff_total'], $okLine['amount']);
+                        Config::set('bit.line.ok', $okLine);
+                    } elseif ($type == 'line-') {
+                        $flowTotal = -bcmul($flow->s_deal_amount, $flow->diff_avg);
+                        $okLine = Config::get('bit.line.ok');
+                        $okLine['diff_total'] = bcadd($okLine['diff_total'], $flowTotal);
+                        $okLine['amount'] = bcadd($flow->s_deal_amount, $okLine['amount']);
+                        $okLine['diff_avg'] = bcdiv($okLine['diff_total'], $okLine['amount']);
+                        Config::set('bit.line.ok', $okLine);
+                    }
+                } elseif ($target == 'huo') {
+                    if ($type == 'line') {
+                        $flowTotal = bcmul($flow->s_deal_amount, $flow->diff_avg);
+                        $flowTotal = $task['lineType'] == '+' ? $flowTotal : -$flowTotal;
+                        $okLine['diff_total'] = $flowTotal;
+                        $okLine['amount'] = $flow->s_deal_amount;
+                        $okLine['diff_avg'] = bcdiv($okLine['diff_total'], $okLine['amount']);
+                        Config::set('bit.line.huo', $okLine);
+                    } elseif ($type == 'line+') {
+                        $flowTotal = bcmul($flow->s_deal_amount, $flow->diff_avg);
+                        $okLine = Config::get('bit.line.huo');
+                        $okLine['diff_total'] = bcadd($okLine['diff_total'], $flowTotal);
+                        $okLine['amount'] = bcadd($flow->s_deal_amount, $okLine['amount']);
+                        $okLine['diff_avg'] = bcdiv($okLine['diff_total'], $okLine['amount']);
+                        Config::set('bit.line.huo', $okLine);
+                    } elseif ($type == 'line-') {
+                        $flowTotal = -bcmul($flow->s_deal_amount, $flow->diff_avg);
+                        $okLine = Config::get('bit.line.huo');
+                        $okLine['diff_total'] = bcadd($okLine['diff_total'], $flowTotal);
+                        $okLine['amount'] = bcadd($flow->s_deal_amount, $okLine['amount']);
+                        $okLine['diff_avg'] = bcdiv($okLine['diff_total'], $okLine['amount']);
+                        Config::set('bit.line.huo', $okLine);
+                    }
+                }
+            }
+            return;
+        }
+        if ($step == 'cancel' && $next == 'finish') {
+            return;
+        }
+        if ($step == 'orderInfo' && $next == 'cancel') {
+            $flow = Flow::findOrFail($task['flowId']);
+            $try = 0;
+            while (true) {
+                $start = microtime(true);
+                $this->flowCancel($flow);
+                if ($flow->isDone() || $flow->isBadDouble()) {
+                    $task['step'] = 'orderInfo';
+                    $task['next'] = 'finish';
+                    return $task;
+                }
+                if ($flow->isTradeSingle()) {
+                    $task['step'] = 'cancel';
+                    $task['next'] = 'finish';
+                    return $task;
+                }
+                if ($try >= $tryLimit) {
+                    myLog('flow.line.cancel.error');
+                    throw new \Exception('flow.line.cancel.error');
+                }
+                $try++;
+                sleepTo($start, $sleep);
+            }
+        }
+        if ($step == 'flow' && $next == 'orderInfo') {
+            $flow = Flow::findOrFail($task['flowId']);
+            $try = 0;
+            while (true) {
+                $start = microtime(true);
+                $this->flowOrderInfo($flow);
+                if ($flow->isDone() || $flow->isBadDouble()) {
+                    $task['step'] = 'orderInfo';
+                    $task['next'] = 'finish';
+                    return $task;
+                }
+                if ($try >= $tryLimit) {
+                    $task['step'] = 'orderInfo';
+                    $task['next'] = 'cancel';
+                    return $task;
+                }
+                $try++;
+                sleepTo($start, $sleep);
+            }
+        }
+    }
+
+    public function flowBalanceTask($task)
+    {
+        $step = array_get($task, 'step', '');
+        $next = $task['next'];
+        $tryLimit = array_get($task, 'tryLimit', 5);
+        $sleep = array_get($task, 'sleep', 1);
+        $amount = $task['amount'];
+        if ($step == 'orderInfo' && $next == 'cancel') {
+            $trade = Trade::findOrFail($task['tradeId']);
+            $try = 0;
+            while (true) {
+                $start = microtime(true);
+                if ($trade->target = 'ok') {
+                    app('okService')->cancel($trade);
+                } else {
+                    app('huoService')->cancel($trade);
+                }
+                if ($trade->status == 3) {
+                    $task['step'] = 'cancel';
+                    $task['next'] = 'balance';
+                    return $task;
+                }
+                if ($try >= $tryLimit) {
+                    myLog('flow.balance.cancel.error');
+                    throw new \Exception('flow.balance.cancel.error');
+                }
+                $try++;
+                sleepTo($start, $sleep);
+            }
+        }
+        if ($step == 'balance' && $next == 'orderInfo') {
+            $trade = Trade::findOrFail($task['tradeId']);
+            $try = 0;
+            while (true) {
+                $start = microtime(true);
+                if ($trade->site == 'ok') {
+                    app('okService')->orderInfo($trade);
+                } else {
+                    app('huoService')->orderInfo($trade);
+                }
+                if ($trade->status == 2) {
+                    $task['step'] = 'orderInfo';
+                    $task['next'] = 'balance';
+                    return $task;
+                }
+                if ($try >= $tryLimit) {
+                    $task['step'] = 'orderInfo';
+                    $task['next'] = 'cancel';
+                    return $task;
+                }
+                $try++;
+                sleepTo($start, $sleep);
+            }
+        }
+        if ($next == 'balance') {
+            list($okAccount, $huoAccount) = $this->syncAccount();
+            $free_btc = bcadd($okAccount->free_btc, $huoAccount->free_btc, 3);
+            $diff_amount = bcsub($free_btc, $amount, 3);
+            $needAmount = abs($diff_amount);
+            $factor = array_get($task, 'factor', 5);
+            if ($needAmount >= 0.01) {
+                $depth = $this->getDepth();
+                if ($diff_amount > 0) {
+                    if ($depth->okAsk > $depth->huoAsk) {
+                        try {
+                            $trade = app('okService')->sell($depth->okAsk - $factor, $needAmount);
+                        } catch (NotEnoughException $e) {
+                            $trade = app('huoService')->sell($depth->huoAsk - $factor, $needAmount);
+                        }
+                    } else {
+                        try {
+                            $trade = app('huoService')->sell($depth->huoAsk - $factor, $needAmount);
+                        } catch (NotEnoughException $e) {
+                            $trade = app('okService')->sell($depth->okAsk - $factor, $needAmount);
+                        }
+                    }
+                } else {
+                    if ($depth->okBid < $depth->huoBid) {
+                        try {
+                            $trade = app('okService')->buy($depth->okBid + $factor, $needAmount);
+                        } catch (NotEnoughException $e) {
+                            $trade = app('huoService')->buy($depth->huoBid + $factor, $needAmount);
+                        }
+                    } else {
+                        try {
+                            $trade = app('huoService')->buy($depth->huoBid + $factor, $needAmount);
+                        } catch (NotEnoughException $e) {
+                            $trade = app('okService')->buy($depth->okBid + $factor, $needAmount);
+                        }
+                    }
+                }
+                if ($trade) {
+                    $task['step'] = 'balance';
+                    $task['next'] = 'orderInfo';
+                    $task['tradeId'] = $trade->id;
+                    return $task;
+                }
+            } else {
+                return;
+            }
         }
     }
 
@@ -512,12 +777,12 @@ class BitService
         if ($site == 'ok') {
             if ($okAccount->free_cny < $price * $amount) {
                 myLog('buyCheck.ok.cny.not.enough', compact('site', 'price', 'amount'));
-                throw new \Exception('buyCheck.ok.cny.not.enough');
+                throw new OkCnyException('buyCheck.ok.cny.not.enough');
             }
         } else {
             if ($huoAccount->free_cny < $price * $amount) {
                 myLog('buyCheck.huo.cny.not.enough', compact('site', 'price', 'amount'));
-                throw new \Exception('buyCheck.huo.cny.not.enough');
+                throw new HuoCnyException('buyCheck.huo.cny.not.enough');
             }
         }
     }
@@ -527,13 +792,13 @@ class BitService
         list($okAccount, $huoAccount) = $this->getAccount();
         if ($site == 'ok') {
             if ($okAccount->free_btc < $amount) {
-                myLog('sellCheck.ok.cny.not.enough', compact('site', 'price', 'amount'));
-                throw new \Exception('sellCheck.ok.cny.not.enough');
+                myLog('sellCheck.ok.btc.not.enough', compact('site', 'price', 'amount'));
+                throw new OkBtcException('sellCheck.ok.btc.not.enough');
             }
         } else {
             if ($huoAccount->free_btc < $amount) {
-                myLog('sellCheck.huo.cny.not.enough', compact('site', 'price', 'amount'));
-                throw new \Exception('sellCheck.ok.cny.not.enough');
+                myLog('sellCheck.huo.btc.not.enough', compact('site', 'price', 'amount'));
+                throw new HuoBtcException('sellCheck.huo.btc.not.enough');
             }
         }
     }

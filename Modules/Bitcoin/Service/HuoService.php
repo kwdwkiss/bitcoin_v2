@@ -14,6 +14,7 @@ class HuoService
 {
     public function buy($price, $amount, $async = false)
     {
+        app('bitService')->buyCheck('huo', $price, $amount);
         if ($async) {
             return app('huoRestApi')->buy($price, $amount, true)->then(function ($data) use ($price, $amount) {
                 $trade = Trade::createHuo($data, $price, $amount, 'buy');
@@ -27,6 +28,7 @@ class HuoService
 
     public function sell($price, $amount, $async = false)
     {
+        app('bitService')->sellCheck('huo', $amount);
         if ($async) {
             return app('huoRestApi')->sell($price, $amount, true)->then(function ($data) use ($price, $amount) {
                 $trade = Trade::createHuo($data, $price, $amount, 'sell');

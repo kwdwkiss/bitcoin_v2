@@ -18,6 +18,6 @@ class Test extends Command
 
     public function fire()
     {
-
+        Config::set('bit.balance.task', ['next' => 'balance']);
     }
 }

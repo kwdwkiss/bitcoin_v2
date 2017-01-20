@@ -151,19 +151,9 @@ class Flow extends Model
         return $this->s_status . $this->b_status . $this->l_status;
     }
 
-    public function isBadSingle()
-    {
-        if ($this->s_order_id == 0 && $this->b_order_id != 0) {
-            return true;
-        } elseif ($this->s_order_id != 0 && $this->b_order_id == 0) {
-            return true;
-        }
-        return false;
-    }
-
     public function isBadDouble()
     {
-        return $this->s_order_id == 0 && $this->b_order_id == 0;
+        return $this->s_status == -1 && $this->b_status == -1;
     }
 
     public function isDone()
@@ -183,22 +173,7 @@ class Flow extends Model
 
     public function isOrder()
     {
-        return $this->isOrderSingle() || $this->isOrderDouble();
-    }
-
-    public function isOrderSingle()
-    {
-        if ($this->s_order_id && $this->s_status == 0 && $this->b_status != 0) {
-            return true;
-        } elseif ($this->s_status != 0 && $this->b_order_id && $this->b_status == 0) {
-            return true;
-        }
-        return false;
-    }
-
-    public function isOrderDouble()
-    {
-        if ($this->s_order_id && $this->s_order_id == 0 && $this->b_order_id && $this->b_order_id == 0) {
+        if (in_array($this->s_status, [0, 1]) || in_array($this->b_status, [0, 1])) {
             return true;
         }
         return false;

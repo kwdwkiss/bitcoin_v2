@@ -15,6 +15,7 @@ class OkService
 {
     public function buy($price, $amount, $async = false)
     {
+        app('bitService')->buyCheck('ok', $price, $amount);
         if ($async) {
             return app('okRestApi')->buy($price, $amount, true)->then(function ($data) use ($price, $amount) {
                 $trade = Trade::createOk($data, $price, $amount, 'buy');
@@ -28,6 +29,7 @@ class OkService
 
     public function sell($price, $amount, $async = false)
     {
+        app('bitService')->sellCheck('ok', $amount);
         if ($async) {
             return app('okRestApi')->sell($price, $amount, true)->then(function ($data) use ($price, $amount) {
                 $trade = Trade::createOk($data, $price, $amount, 'sell');
