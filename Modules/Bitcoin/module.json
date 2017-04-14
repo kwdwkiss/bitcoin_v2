@@ -3,12 +3,12 @@
     "alias": "bitcoin",
     "description": "",
     "keywords": [],
-    "active": 1,
+    "active": 0,
     "order": 0,
     "providers": [
         "Modules\\Bitcoin\\Providers\\BitcoinServiceProvider"
     ],
-    "aliases":{},
+    "aliases": [],
     "files": [
         "start.php"
     ]
